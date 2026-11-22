@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <Resource Include="app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Lmm.Plugins.English\Lmm.Plugins.English.csproj" />
     <ProjectReference Include="..\Lmm.Plugins.Abstractions\Lmm.Plugins.Abstractions.csproj" />
     <ProjectReference Include="..\Lmm.Import\Lmm.Import.csproj" />
@@ -24,6 +28,8 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <!-- Per-monitor DPI awareness; see app.manifest. -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Pixel-art app icon (16x16 grid, nearest-neighbour upscale). -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>

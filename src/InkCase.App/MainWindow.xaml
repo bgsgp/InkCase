@@ -6,7 +6,7 @@
         xmlns:controls="clr-namespace:InkCase.App.Controls"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
-        Title="墨案" Height="920" Width="1440" MinHeight="520" MinWidth="820"
+        Title="墨案" Icon="app.ico" Height="920" Width="1440" MinHeight="520" MinWidth="820"
         WindowStyle="None" ResizeMode="CanResize" Background="#EEECE5"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Display"
         AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver">
@@ -135,10 +135,8 @@
                 <Grid Height="54" Background="Transparent"
                       MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                     <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
-                        <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource Brand}">
-                            <TextBlock Text="评" Foreground="White" FontSize="17" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
+                        <Image Source="app.ico" Width="32" Height="32" VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor" />
                         <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="墨案" FontSize="15.5" FontWeight="SemiBold" Foreground="{StaticResource Ink}" />
                             <TextBlock x:Name="SubtitleText" Text=".lmm 试卷 · 未打开"
@@ -389,11 +387,8 @@
             <Border x:Name="EmptyState" Grid.ColumnSpan="3" Background="#F4F2EC" CornerRadius="14"
                     BorderBrush="{StaticResource Line}" BorderThickness="1">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460">
-                    <Border Width="64" Height="64" CornerRadius="18" Background="{StaticResource BrandSoft}"
-                            HorizontalAlignment="Center">
-                        <TextBlock Text="评" FontSize="30" Foreground="{StaticResource Brand}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
+                    <Image Source="app.ico" Width="64" Height="64" HorizontalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor" />
                     <TextBlock Text="还没有打开试卷" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource Ink}"
                                HorizontalAlignment="Center" Margin="0,18,0,6" />
                     <TextBlock Text="把 .lmm 文件拖到窗口里，或点下面的按钮。壳本身不带任何试卷内容。"

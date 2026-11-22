@@ -38,13 +38,13 @@ TYPE_MAP = {
 }
 
 TAG = re.compile(r"<[^>]+>|[^<]+")
-SPAN_OPEN = re.compile(r'<span[^>]*class="(hl|blank)"[^>]*data-q="(\\d+)"[^>]*>', re.I)
-BLANK_RUN = re.compile(r"_{2,}\\s*(\\d+)\\s*_{2,}")
+SPAN_OPEN = re.compile(r'<span[^>]*class="(hl|blank)"[^>]*data-q="(\d+)"[^>]*>', re.I)
+BLANK_RUN = re.compile(r"_{2,}\s*(\d+)\s*_{2,}")
 
 
 def strip_tags(s):
-    s = re.sub(r"<br\\s*/?>", "\\n", s or "", flags=re.I)
-    s = re.sub(r"</p>", "\\n", s, flags=re.I)
+    s = re.sub(r"<br\s*/?>", "\n", s or "", flags=re.I)
+    s = re.sub(r"</p>", "\n", s, flags=re.I)
     return html.unescape(re.sub(r"<[^>]+>", "", s)).strip()
 
 
@@ -75,10 +75,10 @@ def parse_article(raw):
             re.findall(r"<p([^>]*)>(.*?)</p>", raw or "", flags=re.I | re.S)
             if "byline" not in attrs.lower()]
     if not body:
-        body = [("", chunk) for chunk in (raw or "").split("\\n") if chunk.strip()]
+        body = [("", chunk) for chunk in (raw or "").split("\n") if chunk.strip()]
     for _attrs, chunk in body:
         text, spans = parse_paragraph(chunk)
-        text = re.sub(r"[ \\t]+", " ", text).strip()
+        text = re.sub(r"[ \t]+", " ", text).strip()
         if text:
             paragraphs.append({"index": len(paragraphs), "text": text, "spans": spans})
     return {"paragraphs": paragraphs}
@@ -87,7 +87,7 @@ def parse_article(raw):
 def question_refs(value):
     if isinstance(value, list):
         return [int(v) for v in value if str(v).strip().isdigit()]
-    return [int(v) for v in re.findall(r"\\d+", str(value or ""))]
+    return [int(v) for v in re.findall(r"\d+", str(value or ""))]
 
 
 def convert_section(section):
@@ -142,7 +142,7 @@ def iso(timestamp_ms):
 
 
 def safe_name(text):
-    return re.sub(r'[\\\\/:*?"<>|]+', "-", text).strip() or "paper"
+    return re.sub(r'[\\/:*?"<>|]+', "-", text).strip() or "paper"
 
 
 def write_lmm(paper, path):
