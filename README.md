@@ -39,13 +39,13 @@ ExamReview.sln
 │   │     ISubjectModule 等插件契约（刻意跟 Lmm.Core 分开，方便第三方
 │   │     模块只引用这个小契约库）
 │   ├── Lmm.Plugins.English/       → Lmm.Plugins.Abstractions, Lmm.Core
-│   │     英语学科模块（尚未实现，见"未完成"一节）
+│   │     英语学科模块（示例卷、题型处理器、试卷校验）
 │   ├── Lmm.Import/                → Lmm.Core
 │   │     PDF / OCR / DOCX 导入与试卷自动结构化解析（尚未实现）
 │   ├── Lmm.Translation/           → Lmm.Core
 │   │     ITranslationProvider + 具体实现（尚未实现）
 │   └── ExamReview.App/            (net10.0-windows, WPF) → 以上全部
-│         （尚未实现：目前是模板生成的空壳 WPF 项目）
+│         讲评主窗口：文章 / 题目 / 批注 / 结构 / 对照 / 练习
 └── tests/
       Lmm.Core.Tests / Lmm.Format.Tests / Lmm.Plugins.English.Tests (xUnit)
 ```
@@ -147,27 +147,37 @@ Catmull-Rom 拟合只在抬笔那一刻跑一次。所有 `Brush`/`Pen`/`Geometr
 
 **已完成：**
 - [x] Phase 0：解决方案骨架，10 个项目，依赖关系按架构图接好
-- [x] Phase 1（部分）：`Lmm.Core` 领域模型（`Paper/Section/Article/
+- [x] Phase 1：`Lmm.Core` 领域模型（`Paper/Section/Article/
       Paragraph/Span/StructureRow/Question/Option/BilingualPair/Drill/
       InkStroke/PaperAsset`）
-- [x] Phase 1（部分）：`Lmm.Format` 的 `.lmm` ZIP 容器读写
+- [x] Phase 1：`Lmm.Format` 的 `.lmm` ZIP 容器读写
       （`LmmPackageReader`/`LmmPackageWriter`），含版本迁移骨架
       （`IMigrationStep`/`MigrationRunner`，目前无迁移步骤）
 - [x] Phase 2a：笔迹美化几何库移植（`Lmm.Core/Ink/`），含 xUnit 测试
-      （未在真实环境跑过，见上）
+      （`ResamplePts` 的弧长累加 bug 已修，`dotnet test` 全绿）
+- [x] 插件契约（`Lmm.Plugins.Abstractions`）：`ISubjectModule`、
+      `IQuestionTypeHandler`、`IModuleCatalog`/`ManualModuleCatalog`、
+      `SubjectCapabilities`、`ValidationResult`、题目卡片视图模型
+- [x] Phase 1 收尾：内置英语示例卷（`EnglishSamplePaper`，两节 7 题，
+      带 evidence span / structure / 中英对照 / 课堂小练）+ 只读 WPF 壳子，
+      "主框架↔格式↔插件"端到端打通
+- [x] `Lmm.Plugins.English`：`EnglishSubjectModule`、选择/兜底两种
+      `IQuestionTypeHandler`、`EnglishSectionValidator`（题号、选项、
+      span、pair、structure 引用校验）
+- [x] Phase 2b：WPF `InkCanvasElement`（`DrawingVisual` 之外的
+      `FrameworkElement.OnRender` 缎带渲染 + 实时预览），笔迹按节存入
+      `.lmm`；真机手感仍待人工试写
+- [x] 讲评主窗口：文章高亮证据、题目列表与详情、结构表、中英对照、
+      课堂小练、打开/保存/另存为、保存前校验、未保存确认
 
 **未完成（按原计划的下一步顺序）：**
-- [ ] Phase 1 收尾：内置英语示例卷（把旧版 DEMO 数据迁过来）+ 最简只读
-      WPF 壳子，验证"主框架↔格式↔插件"端到端打通
-- [ ] `Lmm.Plugins.English`：`ISubjectModule`/`IQuestionTypeHandler` 的
-      实际实现（目前只有空的类库项目）
-- [ ] Phase 2b：WPF `DrawingVisual` 笔迹画布 + 真机手感测试
+- [ ] Phase 2b 收尾：压感/橡皮/多笔并存的手感细节，真机试写后调参
 - [ ] Phase 3：PDF/OCR/DOCX 导入管线（`Lmm.Import`，选型已定：
       PdfPig + PDFtoImage + Windows.Media.Ocr/Tesseract +
       DocumentFormat.OpenXml，见原计划）
 - [ ] Phase 4：翻译（`Lmm.Translation`，`ITranslationProvider` + 默认
       接 MyMemory）
-- [ ] Phase 5：保存/导出、试卷库抽屉（文件夹 + 可重建的 SQLite 检索
+- [ ] Phase 5：导出（PDF/打印）、试卷库抽屉（文件夹 + 可重建的 SQLite 检索
       索引，索引不是数据源）、设置、快捷键、打印等
 - [ ] Phase 6：`ManualModuleCatalog` → `AssemblyScanningModuleCatalog`，
       并实现第二个学科模块验证插件契约
