@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lmm.Plugins.English\Lmm.Plugins.English.csproj" />
+    <ProjectReference Include="..\Lmm.Plugins.Abstractions\Lmm.Plugins.Abstractions.csproj" />
+    <ProjectReference Include="..\Lmm.Import\Lmm.Import.csproj" />
+    <ProjectReference Include="..\Lmm.Translation\Lmm.Translation.csproj" />
+    <ProjectReference Include="..\Lmm.Format\Lmm.Format.csproj" />
+    <ProjectReference Include="..\Lmm.Core\Lmm.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- Allows restore/build to proceed on non-Windows dev machines (e.g. this Linux container).
+         Actual WPF compilation/run still requires Windows + VS2026. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+</Project>

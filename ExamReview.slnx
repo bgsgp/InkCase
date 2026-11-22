@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ExamReview.App/ExamReview.App.csproj" />
+    <Project Path="src/Lmm.Core/Lmm.Core.csproj" />
+    <Project Path="src/Lmm.Format/Lmm.Format.csproj" />
+    <Project Path="src/Lmm.Import/Lmm.Import.csproj" />
+    <Project Path="src/Lmm.Plugins.Abstractions/Lmm.Plugins.Abstractions.csproj" />
+    <Project Path="src/Lmm.Plugins.English/Lmm.Plugins.English.csproj" />
+    <Project Path="src/Lmm.Translation/Lmm.Translation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Lmm.Core.Tests/Lmm.Core.Tests.csproj" />
+    <Project Path="tests/Lmm.Format.Tests/Lmm.Format.Tests.csproj" />
+    <Project Path="tests/Lmm.Plugins.English.Tests/Lmm.Plugins.English.Tests.csproj" />
+  </Folder>
+</Solution>
