@@ -17,7 +17,7 @@ using Lmm.Translation;
 using Microsoft.Win32;
 using Section = Lmm.Core.Model.Section;
 
-namespace ExamReview.App;
+namespace InkCase.App;
 
 /// <summary>
 /// The review shell. It knows nothing about English: the paper's moduleId is
@@ -118,7 +118,7 @@ public partial class MainWindow : Window
         SectionList.ItemsSource = null;
         ClearSection();
         SubtitleText.Text = ".lmm 试卷 · 未打开";
-        Title = "ExamReview";
+        Title = "墨案";
         UpdateStatus("就绪");
     }
 
@@ -157,7 +157,7 @@ public partial class MainWindow : Window
         _path = path;
         _dirty = false;
         _selectedQuestionNumber = 0;
-        Title = $"{paper.Title} — {module.DisplayName} — ExamReview";
+        Title = $"{paper.Title} — {module.DisplayName} — 墨案";
         SubtitleText.Text = string.IsNullOrWhiteSpace(path) ? $"{paper.Title} · 未保存" : Path.GetFileName(path);
         EmptyState.Visibility = Visibility.Collapsed;
 
@@ -179,7 +179,7 @@ public partial class MainWindow : Window
         var dialog = new OpenFileDialog
         {
             Title = "打开试卷",
-            Filter = "ExamReview 试卷 (*.lmm)|*.lmm|所有文件 (*.*)|*.*",
+            Filter = "墨案 试卷 (*.lmm)|*.lmm|所有文件 (*.*)|*.*",
         };
         if (dialog.ShowDialog(this) != true) return;
         OpenPath(dialog.FileName);
@@ -241,7 +241,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog
         {
             Title = "保存试卷",
-            Filter = "ExamReview 试卷 (*.lmm)|*.lmm",
+            Filter = "墨案 试卷 (*.lmm)|*.lmm",
             FileName = $"{SanitizeFileName(_paper.Title)}.lmm",
         };
         if (dialog.ShowDialog(this) != true) return;

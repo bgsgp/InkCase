@@ -6,7 +6,7 @@ using Lmm.Core.Ink;
 using Lmm.Core.Model;
 using Pt = Lmm.Core.Ink.Pt;
 
-namespace ExamReview.App.Controls;
+namespace InkCase.App.Controls;
 
 /// <summary>
 /// Freehand annotation layer. Per the project's rendering constraint it is a

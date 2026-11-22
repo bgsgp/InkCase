@@ -15,6 +15,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- Product name: 墨案 / InkCase. The exe is InkCase.exe; namespaces stay InkCase.App. -->
+    <AssemblyName>InkCase</AssemblyName>
+    <Product>墨案 InkCase</Product>
+    <AssemblyTitle>墨案 InkCase</AssemblyTitle>
     <!-- Allows restore/build to proceed on non-Windows dev machines (e.g. this Linux container).
          Actual WPF compilation/run still requires Windows + VS2026. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>

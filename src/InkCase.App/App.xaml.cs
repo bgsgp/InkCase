@@ -6,7 +6,7 @@ using Lmm.Plugins.Abstractions;
 using Lmm.Plugins.English;
 using Lmm.Translation;
 
-namespace ExamReview.App;
+namespace InkCase.App;
 
 public partial class App : Application
 {
@@ -41,7 +41,7 @@ public partial class App : Application
     /// <summary>Path of the crash log; the shell surfaces it when it exists.</summary>
     public static string CrashLogPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "ExamReview", "crash.log");
+            "InkCase", "crash.log");
 
     private static void LogCrash(Exception? ex)
     {

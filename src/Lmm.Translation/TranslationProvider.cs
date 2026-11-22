@@ -23,7 +23,7 @@ public sealed class MyMemoryTranslationProvider : ITranslationProvider
     public MyMemoryTranslationProvider(HttpClient? http = null)
     {
         _http = http ?? new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("ExamReview/0.1");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("InkCase/0.1");
     }
 
     public string Name => "MyMemory";

@@ -1,6 +1,7 @@
-# ExamReview
+# 墨案（InkCase）
 
-英语试卷讲评工具的 C# 14 / .NET 10 / WPF 重写版，替代原先的单文件 HTML/JS
+产品名「墨案」= 墨（手写板书）+ 案（试卷/案卷），英文 InkCase（`.lmm` 可读作
+lecture markup model）。英语试卷讲评工具的 C# 14 / .NET 10 / WPF 重写版，替代原先的单文件 HTML/JS
 方案。本文档面向接手后续开发的人／协作 AI，目标是不依赖这次对话的上下文
 也能看懂现状、架构和下一步。
 
@@ -28,7 +29,7 @@ UI（中英对照、课堂小练）→ 手写板书批注（含"美化"笔迹算
 加载对应插件来解释/渲染/编辑内容。
 
 ```
-ExamReview.sln
+InkCase.slnx
 ├── src/
 │   ├── Lmm.Core/                  (net10.0，不引用任何 WPF/UI 程序集)
 │   │     领域模型（Paper/Section/Question/Article/...）
@@ -45,7 +46,7 @@ ExamReview.sln
 │   │     PDF / OCR / DOCX 导入（未实现）
 │   ├── Lmm.Translation/           → Lmm.Core
 │   │     ITranslationProvider + MyMemory 实现
-│   └── ExamReview.App/            (net10.0-windows, WPF) → 以上全部
+│   └── InkCase.App/            (net10.0-windows, WPF) → 以上全部
 │         讲评主窗口：文章 / 题目 / 批注 / 结构 / 对照 / 练习
 └── tests/
       Lmm.Core.Tests / Lmm.Format.Tests / Lmm.Plugins.English.Tests /
@@ -154,13 +155,13 @@ bug，别改回去。（为它专门加过的"闭合笔迹跳过圆帽"分支也
 ## 构建现状 / 已知限制
 
 历史：这个项目的骨架最早是在一个 **Linux 容器**里搭的，当时
-`ExamReview.App`（WPF）根本编不过、3 个 xUnit 测试项目也因为容器出站网络
+`InkCase.App`（WPF）根本编不过、3 个 xUnit 测试项目也因为容器出站网络
 不通而从未跑过。这两条现在都不成立——在 Windows + .NET SDK 11.0.100 上
 已经全量构建、全量测试、发布并实机截图验证过，见文末"Windows 上的实测记录"。
 
 选型注意事项（选第三方库时仍然适用）：
 
-- `ExamReview.App` 是 `net10.0-windows` + `UseWPF`，只能在 Windows 上编译；
+- `InkCase.App` 是 `net10.0-windows` + `UseWPF`，只能在 Windows 上编译；
   `.csproj` 里的 `EnableWindowsTargeting=true` 只是让 `dotnet restore`/IDE
   解析不报错，别指望在 Linux 上出可运行产物。
 - 发布一律 **框架依赖**（`--self-contained false`）：目标机器需要装 .NET 10
@@ -214,14 +215,14 @@ python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./
       课堂小练"四页、工具栏（打开·导入·保存·另存为｜批注·撤销一笔·清除本节｜
       显示全部答案｜A−/A+ 字号）、空态引导、拖放打开、Ctrl+O/S/I
 - [x] 空壳原则：程序本身**不内置任何试卷**，启动就是空态；内容全部来自
-      `.lmm` 文件或导入。命令行参数可挂文件关联（`ExamReview.App.exe x.lmm`）
+      `.lmm` 文件或导入。命令行参数可挂文件关联（`InkCase.exe x.lmm`）
 - [x] 导入（`Lmm.Import.PaperTextImporter`）：纯文本/粘贴文本 → 试卷
       （文章分段、题号/选项/答案/解析识别），解析不到答案时占位并在
       `Notes` 里明说，不静默造假
 - [x] 翻译（`Lmm.Translation`）：`ITranslationProvider` + MyMemory 实现
       （长段按句分块、配额告警转成可读错误），主窗口"翻译本节"按钮接好
 - [x] 校验：保存前逐节 `Validate`，error 阻断并列出；缺模块时明确报错
-- [x] 崩溃日志：`%APPDATA%\ExamReview\crash.log`（WinExe 无控制台，
+- [x] 崩溃日志：`%APPDATA%\InkCase\crash.log`（WinExe 无控制台，
       不留日志的话异常会静默消失）
 
 **未完成（按原计划的下一步顺序）：**
@@ -253,8 +254,8 @@ python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./
 README 上面说的"到有正常网络的开发机上第一件事是 `dotnet test`"，已在这台
 Windows 机器上做过：
 
-- `dotnet build ExamReview.slnx -c Release` —— 0 警告 0 错误（.NET SDK 11.0.100）。
-- `dotnet test ExamReview.slnx -c Release` —— **34/34 全绿**
+- `dotnet build InkCase.slnx -c Release` —— 0 警告 0 错误（.NET SDK 11.0.100）。
+- `dotnet test InkCase.slnx -c Release` —— **44/44 全绿**
   （Lmm.Core.Tests 19、Lmm.Format.Tests 2、Lmm.Plugins.English.Tests 8、
   Lmm.Import.Tests 5）。
 - 首次跑测试挂了 1 个：`InkGeometryTests.ResamplePts_ProducesApproximatelyEqualSpacing`
@@ -263,8 +264,8 @@ Windows 机器上做过：
   走过的输入段，导致路径长度被重复计数，于是 `step=4` 时出现成串的
   ~0.03–1.2px 近重复点。已改为按输入段（`p[i-1]`→`p[i]`）逐段累计
   `carried` 弧长、到 step 再插值输出；同一用例现在稳定输出 3.997 间距。
-- 发布：`dotnet publish src/ExamReview.App/ExamReview.App.csproj -c Release -r win-x64 --self-contained false -o <目录>`，
-  产物可直接双击 `ExamReview.App.exe` 运行（框架依赖版约 0.4MB / 18 个文件）。
+- 发布：`dotnet publish src/InkCase.App/InkCase.App.csproj -c Release -r win-x64 --self-contained false -o <目录>`，
+  产物可直接双击 `InkCase.exe` 运行（框架依赖版约 0.4MB / 17 个文件）。
   发布一律用**框架依赖**（framework-dependent），不做 self-contained：目标机器需要装
   .NET 10 桌面运行时（Microsoft.WindowsDesktop.App 10.x）。
 - 另外两条在本机踩到的、换台机器也大概率会踩的：
@@ -274,4 +275,4 @@ Windows 机器上做过：
     `SystemParameters.WorkArea` 钳制、小屏自动最大化。
   - **静默退出**：`WinExe` 没有控制台，异常会无声消失（WER 也不一定留痕）。
     已加 `crash.log`；再有"窗口一闪就没了"，先看
-    `%APPDATA%\ExamReview\crash.log`。
+    `%APPDATA%\InkCase\crash.log`。

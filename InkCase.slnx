@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/ExamReview.App/ExamReview.App.csproj" />
+    <Project Path="src/InkCase.App/InkCase.App.csproj" />
     <Project Path="src/Lmm.Core/Lmm.Core.csproj" />
     <Project Path="src/Lmm.Format/Lmm.Format.csproj" />
     <Project Path="src/Lmm.Import/Lmm.Import.csproj" />
