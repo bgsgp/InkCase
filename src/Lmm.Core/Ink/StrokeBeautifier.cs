@@ -8,7 +8,12 @@ namespace Lmm.Core.Ink;
 /// <param name="Color">Pen color, e.g. "#D33A2C".</param>
 /// <param name="Width">Base pen width in pixels (at the canvas size used to capture it).</param>
 /// <param name="FractionalPoints">Raw captured points, fractional coordinates.</param>
-public sealed record RawStroke(string Color, double Width, IReadOnlyList<Pt> FractionalPoints);
+public sealed record RawStroke(
+    string Color,
+    double Width,
+    IReadOnlyList<Pt> FractionalPoints,
+    IReadOnlyList<double>? Pressures = null,
+    IReadOnlyList<double>? Times = null);
 
 /// <summary>
 /// Output of <see cref="StrokeBeautifier.Beautify"/>: resampled, smoothed
@@ -49,7 +54,7 @@ public static class StrokeBeautifier
             var b = ToPixel(pts[1], canvasW, canvasH);
             double dd = Pt.Distance(a, b);
             if (dd < 8) return null;
-            return FinishStroke(st.Color, st.Width, [a, b], canvasW, canvasH, 8, pts);
+            return FinishStroke(st.Color, st.Width, [a, b], canvasW, canvasH, 8, pts, st.Pressures, st.Times);
         }
 
         int n = pts.Count;
@@ -83,7 +88,7 @@ public static class StrokeBeautifier
                 double ang = a0 + i / 48.0 * Math.PI * 2;
                 ellipse.Add(new Pt(cx + rx * Math.Cos(ang), cy + ry * Math.Sin(ang)));
             }
-            return FinishStroke(st.Color, st.Width, ellipse, canvasW, canvasH, 4, pts);
+            return FinishStroke(st.Color, st.Width, ellipse, canvasW, canvasH, 4, pts, st.Pressures, st.Times);
         }
 
         // Near-straight -> straighten (keep 40% of natural deviation so it isn't ruler-stiff).
@@ -109,7 +114,7 @@ public static class StrokeBeautifier
                 double bx = p[0].X + t3 * dx0, by = p[0].Y + t3 * dy0;
                 seg.Add(new Pt(bx + (p[i].X - bx) * 0.4, by + (p[i].Y - by) * 0.4));
             }
-            return FinishStroke(st.Color, st.Width, seg, canvasW, canvasH, 8, pts);
+            return FinishStroke(st.Color, st.Width, seg, canvasW, canvasH, 8, pts, st.Pressures, st.Times);
         }
 
         // Everything else: split only at true corners, Catmull-Rom fit within each segment.
@@ -135,13 +140,14 @@ public static class StrokeBeautifier
             s.AddRange(piece);
         }
         if (s.Count < 2) return null;
-        return FinishStroke(st.Color, st.Width, s, canvasW, canvasH, 2, pts);
+        return FinishStroke(st.Color, st.Width, s, canvasW, canvasH, 2, pts, st.Pressures, st.Times);
     }
 
     /// <summary>Resample + smooth + compute width factors; normalizes back to fractional coordinates.</summary>
     private static BeautifiedStroke FinishStroke(
         string color, double w, IReadOnlyList<Pt> pixelPoints, double canvasW, double canvasH,
-        double step, IReadOnlyList<Pt>? rawFractionalPoints)
+        double step, IReadOnlyList<Pt>? rawFractionalPoints,
+        IReadOnlyList<double>? pressures = null, IReadOnlyList<double>? times = null)
     {
         var rs = InkGeometry.ResamplePts(pixelPoints, step);
         rs = InkGeometry.SmoothPts(rs, 1, 2);
@@ -151,7 +157,7 @@ public static class StrokeBeautifier
             ? rawFractionalPoints.Select(pp => ToPixel(pp, canvasW, canvasH)).ToList()
             : rs;
 
-        var wf = InkGeometry.WidthFactors(raw, rs);
+        var wf = InkWidths.FromCapture(raw, pressures, times, rs);
         return new BeautifiedStroke(color, w, np, wf);
     }
 

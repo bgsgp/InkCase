@@ -4,115 +4,397 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="clr-namespace:ExamReview.App.Controls"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
-        Title="ExamReview" Height="860" Width="1380"
-        WindowStartupLocation="CenterScreen">
+        Title="ExamReview" Height="920" Width="1440" MinHeight="520" MinWidth="820"
+        WindowStyle="None" ResizeMode="CanResize" Background="#EEECE5"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display"
+        AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="Bg" Color="#EEECE5" />
+        <SolidColorBrush x:Key="Surface" Color="#FFFEFB" />
+        <SolidColorBrush x:Key="Surface2" Color="#FAF8F2" />
+        <SolidColorBrush x:Key="Ink" Color="#1B1E23" />
+        <SolidColorBrush x:Key="Muted" Color="#646A72" />
+        <SolidColorBrush x:Key="Line" Color="#E2DCCF" />
+        <SolidColorBrush x:Key="Brand" Color="#0D5A53" />
+        <SolidColorBrush x:Key="BrandSoft" Color="#E8F0ED" />
+        <SolidColorBrush x:Key="Red" Color="#B23A2C" />
+        <SolidColorBrush x:Key="Amber" Color="#A9803A" />
+        <SolidColorBrush x:Key="Hl" Color="#FFE08A" />
+
+        <Style x:Key="ToolButton" TargetType="Button">
+            <Setter Property="Background" Value="#FFFEFB" />
+            <Setter Property="Foreground" Value="{StaticResource Ink}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="11,5" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="B" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="B" Property="Background" Value="{StaticResource BrandSoft}" />
+                                <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Brand}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="B" Property="Background" Value="#DCEAE5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ToolToggle" TargetType="ToggleButton">
+            <Setter Property="Background" Value="#FFFEFB" />
+            <Setter Property="Foreground" Value="{StaticResource Ink}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="11,5" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="B" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="B" Property="Background" Value="{StaticResource BrandSoft}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="B" Property="Background" Value="{StaticResource Brand}" />
+                                <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Brand}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SegTab" TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource Muted}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="B" Background="Transparent" Padding="14,8" Margin="0,0,4,0" CornerRadius="7">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="B" Property="Background" Value="{StaticResource Surface2}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="B" Property="Background" Value="{StaticResource BrandSoft}" />
+                                <Setter Property="Foreground" Value="{StaticResource Brand}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Surface}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+        </Style>
+    </Window.Resources>
+
     <DockPanel>
-        <ToolBarTray DockPanel.Dock="Top" IsLocked="True">
-            <ToolBar>
-                <Button Content="打开…" Click="OpenPaper_Click" ToolTip="打开一个 .lmm 试卷文件 (Ctrl+O)" />
-                <Button Content="保存" Click="SavePaper_Click" ToolTip="保存到当前文件 (Ctrl+S)" />
-                <Button Content="另存为…" Click="SaveAsPaper_Click" />
-                <Separator />
-                <Button Content="新建示例卷" Click="NewSample_Click" />
-                <Separator />
-                <ToggleButton x:Name="InkToggle" Content="批注" Checked="InkToggle_Changed" Unchecked="InkToggle_Changed"
-                              ToolTip="打开后可以在文章上自由手写批注，笔迹按章节保存进 .lmm" />
-                <Button Content="清除本节笔迹" Click="ClearInk_Click" />
-            </ToolBar>
-        </ToolBarTray>
+        <!-- ================= header ================= -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource Surface}"
+                BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <!-- brand row: drag area + window buttons -->
+                <Grid Height="54" Background="Transparent"
+                      MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                    <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                        <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource Brand}">
+                            <TextBlock Text="评" Foreground="White" FontSize="17" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="试卷讲评" FontSize="15.5" FontWeight="SemiBold" Foreground="{StaticResource Ink}" />
+                            <TextBlock x:Name="SubtitleText" Text=".lmm 试卷 · 未打开"
+                                       FontSize="11.5" Foreground="{StaticResource Muted}" />
+                        </StackPanel>
+                    </StackPanel>
 
-        <StatusBar DockPanel.Dock="Bottom">
-            <StatusBarItem>
-                <TextBlock x:Name="StatusText" Text="就绪" />
-            </StatusBarItem>
-        </StatusBar>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="MinBtn" Content="—" Width="44" Height="34" FontSize="13"
+                                Background="Transparent" BorderThickness="0" Click="MinBtn_Click"
+                                ToolTip="最小化" />
+                        <Button x:Name="MaxBtn" Content="□" Width="44" Height="34" FontSize="13"
+                                Background="Transparent" BorderThickness="0" Click="MaxBtn_Click"
+                                ToolTip="最大化 / 还原" />
+                        <Button x:Name="CloseBtn" Content="✕" Width="46" Height="34" FontSize="13"
+                                Background="Transparent" BorderThickness="0" Click="CloseBtn_Click"
+                                ToolTip="关闭" />
+                    </StackPanel>
+                </Grid>
 
-        <Grid Margin="10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="260" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="430" />
-            </Grid.ColumnDefinitions>
-
-            <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="4">
-                <ListBox x:Name="SectionList" BorderThickness="0"
-                         HorizontalContentAlignment="Stretch"
-                         SelectionChanged="SectionList_SelectionChanged">
+                <!-- section tabs -->
+                <ListBox x:Name="SectionList" BorderThickness="0" Background="Transparent"
+                         Margin="14,0,14,0" Padding="0" MinHeight="46"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                         SelectionChanged="SectionList_SelectionChanged" Focusable="False">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0,0,4,0" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="B" Background="Transparent" Padding="13,8" CornerRadius="8,8,0,0"
+                                                BorderBrush="Transparent" BorderThickness="0,0,0,2">
+                                            <ContentPresenter />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="B" Property="Background" Value="{StaticResource Surface2}" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Brand}" />
+                                                <Setter TargetName="B" Property="Background" Value="{StaticResource Surface}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="4,6">
-                                <TextBlock Text="{Binding Header}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Sub}" FontSize="11" Foreground="#666" TextTrimming="CharacterEllipsis" />
+                            <StackPanel>
+                                <TextBlock Text="{Binding Header}" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{StaticResource Ink}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Sub}" FontSize="10.5" Foreground="{StaticResource Muted}"
+                                           TextTrimming="CharacterEllipsis" MaxWidth="220" />
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
+
+                <!-- toolbar -->
+                <Border Background="{StaticResource Surface2}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+                    <WrapPanel Margin="14,7" Orientation="Horizontal">
+                        <Button Content="打开…" Style="{StaticResource ToolButton}" Click="OpenPaper_Click"
+                                ToolTip="打开 .lmm 试卷 (Ctrl+O)" />
+                        <Button Content="导入…" Style="{StaticResource ToolButton}" Click="Import_Click"
+                                ToolTip="从文本 / 图片导入生成试卷 (Ctrl+I)" />
+                        <Button Content="保存" Style="{StaticResource ToolButton}" Click="SavePaper_Click"
+                                ToolTip="保存 (Ctrl+S)" />
+                        <Button Content="另存为…" Style="{StaticResource ToolButton}" Click="SaveAsPaper_Click" />
+                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
+
+                        <ToggleButton x:Name="InkToggle" Content="批注" Style="{StaticResource ToolToggle}"
+                                      Checked="InkToggle_Changed" Unchecked="InkToggle_Changed"
+                                      ToolTip="打开后在文章上自由手写，笔迹随试卷保存" />
+                        <Button Content="撤销一笔" Style="{StaticResource ToolButton}" Click="UndoInk_Click" />
+                        <Button Content="清除本节" Style="{StaticResource ToolButton}" Click="ClearInk_Click" />
+                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
+
+                        <ToggleButton x:Name="RevealToggle" Content="显示全部答案" Style="{StaticResource ToolToggle}"
+                                      Checked="RevealToggle_Changed" Unchecked="RevealToggle_Changed"
+                                      ToolTip="一键显示 / 隐藏所有题目的答案与解析" />
+                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
+
+                        <Button Content="A−" Style="{StaticResource ToolButton}" Click="ZoomOut_Click" ToolTip="缩小字号" />
+                        <TextBlock x:Name="ZoomText" Text="100%" Foreground="{StaticResource Muted}" FontSize="12"
+                                   VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <Button Content="A＋" Style="{StaticResource ToolButton}" Click="ZoomIn_Click" ToolTip="放大字号" />
+
+                        <TextBlock x:Name="StatusText" Text="就绪" Foreground="{StaticResource Muted}" FontSize="12"
+                                   VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis" />
+                    </WrapPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ================= content ================= -->
+        <Grid x:Name="RootGrid" Margin="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="380" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="400" MinWidth="300" MaxWidth="760" />
+            </Grid.ColumnDefinitions>
+
+            <!-- left card: article -->
+            <Border x:Name="LeftCard" Style="{StaticResource Card}" Grid.Column="0">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Padding="24,16,24,10">
+                        <StackPanel>
+                            <TextBlock x:Name="ArticleTitle" FontSize="20" FontWeight="SemiBold"
+                                       Foreground="{StaticResource Ink}" TextWrapping="Wrap" />
+                            <TextBlock x:Name="ArticleMeta" FontSize="12" Foreground="{StaticResource Muted}"
+                                       Margin="0,5,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer x:Name="ArticleScroll" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0">
+                        <Grid>
+                            <StackPanel x:Name="ArticlePanel" Margin="28,6,34,120" />
+                            <controls:InkCanvasElement x:Name="InkCanvas"
+                                                       Height="{Binding ActualHeight, ElementName=ArticlePanel}"
+                                                       HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                                       Visibility="Collapsed"
+                                                       StrokeFinished="InkCanvas_StrokeFinished" />
+                        </Grid>
+                    </ScrollViewer>
+                </DockPanel>
             </Border>
 
-            <DockPanel Grid.Column="1" Margin="10,0">
-                <TextBlock x:Name="ArticleHeader" DockPanel.Dock="Top" FontSize="13" Foreground="#555" Margin="6,0,6,8" TextWrapping="Wrap" />
-                <ScrollViewer x:Name="ArticleScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid>
-                        <StackPanel x:Name="ArticlePanel" Margin="30,20,30,90" />
-                        <controls:InkCanvasElement x:Name="InkCanvas"
-                                                   Height="{Binding ActualHeight, ElementName=ArticlePanel}"
-                                                   VerticalAlignment="Top"
-                                                   Visibility="Collapsed"
-                                                   StrokeFinished="InkCanvas_StrokeFinished" />
-                    </Grid>
-                </ScrollViewer>
-            </DockPanel>
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch"
+                          Background="Transparent" ResizeBehavior="PreviousAndNext" />
 
-            <TabControl Grid.Column="2">
-                <TabItem Header="题目">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="300" />
-                        </Grid.RowDefinitions>
+            <!-- right card: panels -->
+            <Border x:Name="RightCard" Style="{StaticResource Card}" Grid.Column="2">
+                <TabControl x:Name="RightTabs" BorderThickness="0" Background="Transparent" Padding="0"
+                            ItemContainerStyle="{StaticResource SegTab}">
+                    <TabItem Header="题目">
+                        <Grid Margin="0,4,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ListBox x:Name="QuestionList" Grid.Row="0" BorderThickness="0" Background="Transparent"
+                                     HorizontalContentAlignment="Stretch" Padding="8,4"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                     ScrollViewer.CanContentScroll="True"
+                                     SelectionChanged="QuestionList_SelectionChanged">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="B" Background="Transparent" CornerRadius="9" Margin="0,0,0,6"
+                                                            Padding="12,9" BorderThickness="1" BorderBrush="{StaticResource Line}">
+                                                        <ContentPresenter />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="B" Property="Background" Value="{StaticResource Surface2}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="B" Property="Background" Value="{StaticResource BrandSoft}" />
+                                                            <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Brand}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Header}" FontWeight="SemiBold" FontSize="13"
+                                                       Foreground="{StaticResource Ink}" />
+                                            <TextBlock Text="{Binding Preview}" Foreground="{StaticResource Muted}"
+                                                       FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
 
-                        <ListBox x:Name="QuestionList" Grid.Row="0"
-                                 HorizontalContentAlignment="Stretch"
-                                 VirtualizingPanel.IsVirtualizing="True"
-                                 VirtualizingPanel.VirtualizationMode="Recycling"
-                                 ScrollViewer.CanContentScroll="True"
-                                 SelectionChanged="QuestionList_SelectionChanged">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="2,4">
-                                        <TextBlock Text="{Binding Header}" FontWeight="SemiBold" FontSize="13" />
-                                        <TextBlock Text="{Binding Preview}" Foreground="#555" FontSize="12"
-                                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="34" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                            <Border Grid.Row="1" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0"
+                                    Background="{StaticResource Surface2}" MaxHeight="330">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="DetailPanel" Margin="16,12,16,20" />
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
+                    </TabItem>
 
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" BorderBrush="#DDD" BorderThickness="0,1,0,0">
-                            <StackPanel x:Name="DetailPanel" Margin="10,8,10,20" />
+                    <TabItem Header="段落结构">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="StructurePanel" Margin="16,10,16,20" />
                         </ScrollViewer>
-                    </Grid>
-                </TabItem>
+                    </TabItem>
 
-                <TabItem Header="段落结构">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="StructurePanel" Margin="10" />
-                    </ScrollViewer>
-                </TabItem>
+                    <TabItem Header="中英对照">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top" Margin="16,8,16,2">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="TranslateBtn" Content="机翻本节" Style="{StaticResource ToolButton}"
+                                            Click="Translate_Click" ToolTip="调用在线翻译（MyMemory）补齐中英对照" />
+                                    <TextBlock x:Name="TranslateHint" Foreground="{StaticResource Muted}" FontSize="11.5"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="260" />
+                                </StackPanel>
+                            </Border>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel x:Name="BilingualPanel" Margin="16,8,16,20" />
+                            </ScrollViewer>
+                        </DockPanel>
+                    </TabItem>
 
-                <TabItem Header="中英对照">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="BilingualPanel" Margin="10" />
-                    </ScrollViewer>
-                </TabItem>
+                    <TabItem Header="课堂小练">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="DrillPanel" Margin="16,10,16,20" />
+                        </ScrollViewer>
+                    </TabItem>
+                </TabControl>
+            </Border>
 
-                <TabItem Header="课堂小练">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="DrillPanel" Margin="10" />
-                    </ScrollViewer>
-                </TabItem>
-            </TabControl>
+            <!-- empty state -->
+            <Border x:Name="EmptyState" Grid.ColumnSpan="3" Background="#F4F2EC" CornerRadius="14"
+                    BorderBrush="{StaticResource Line}" BorderThickness="1">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460">
+                    <Border Width="64" Height="64" CornerRadius="18" Background="{StaticResource BrandSoft}"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="评" FontSize="30" Foreground="{StaticResource Brand}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="还没有打开试卷" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource Ink}"
+                               HorizontalAlignment="Center" Margin="0,18,0,6" />
+                    <TextBlock Text="把 .lmm 文件拖到窗口里，或点下面的按钮。壳本身不带任何试卷内容。"
+                               FontSize="13" Foreground="{StaticResource Muted}" TextWrapping="Wrap"
+                               TextAlignment="Center" LineHeight="22" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0">
+                        <Button Content="打开 .lmm…" Style="{StaticResource ToolButton}" Padding="18,9" FontSize="13.5"
+                                Click="OpenPaper_Click" />
+                        <Button Content="从文本导入…" Style="{StaticResource ToolButton}" Padding="18,9" FontSize="13.5"
+                                Margin="10,0,0,0" Click="Import_Click" />
+                    </StackPanel>
+                    <TextBlock Text="Ctrl+O 打开 · Ctrl+S 保存 · Ctrl+I 导入" FontSize="11.5"
+                               Foreground="{StaticResource Muted}" HorizontalAlignment="Center" Margin="0,16,0,0" />
+                </StackPanel>
+            </Border>
         </Grid>
     </DockPanel>
 </Window>

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.IO;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -7,8 +8,10 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Lmm.Core.Model;
 using Lmm.Format;
+using Lmm.Import;
 using Lmm.Plugins.Abstractions;
 using Lmm.Plugins.English;
+using Lmm.Translation;
 using Microsoft.Win32;
 using Section = Lmm.Core.Model.Section;
 
@@ -18,17 +21,21 @@ namespace ExamReview.App;
 /// The review shell. It knows nothing about English: the paper's moduleId is
 /// resolved through <see cref="IModuleCatalog"/> and every subject-specific
 /// decision (validation, question cards) goes through <see cref="ISubjectModule"/>.
+/// The shell starts empty — no built-in paper — so every piece of content comes
+/// from an .lmm file opened or imported by the user.
 /// </summary>
 public partial class MainWindow : Window
 {
     private static readonly Brush EvidenceBrush = Frozen(Color.FromRgb(0xFF, 0xF1, 0xB8));
     private static readonly Brush EvidenceBrushStrong = Frozen(Color.FromRgb(0xFF, 0xD5, 0x5A));
     private static readonly Brush CorrectBrush = Frozen(Color.FromRgb(0x1B, 0x7F, 0x3B));
-    private static readonly Brush MutedBrush = Frozen(Color.FromRgb(0x66, 0x66, 0x66));
+    private static readonly Brush MutedBrush = Frozen(Color.FromRgb(0x64, 0x6A, 0x72));
+    private static readonly Brush InkBrush = Frozen(Color.FromRgb(0x1B, 0x1E, 0x23));
 
     private readonly IModuleCatalog _catalog;
     private readonly LmmPackageReader _reader;
     private readonly LmmPackageWriter _writer;
+    private readonly ITranslationProvider _translator;
 
     private Paper? _paper;
     private ISubjectModule? _module;
@@ -36,23 +43,35 @@ public partial class MainWindow : Window
     private string? _path;
     private bool _dirty;
     private int _selectedQuestionNumber;
+    private double _zoom = 1.0;
+    private bool _revealAll;
 
-    public MainWindow(IModuleCatalog catalog, LmmPackageReader reader, LmmPackageWriter writer)
+    public MainWindow(
+        IModuleCatalog catalog,
+        LmmPackageReader reader,
+        LmmPackageWriter writer,
+        ITranslationProvider translator)
     {
         _catalog = catalog;
         _reader = reader;
         _writer = writer;
+        _translator = translator;
         InitializeComponent();
 
-        // 860x1380 doesn't fit every screen (e.g. 1280x720 laptops); clamp to the
-        // work area so the toolbar and status bar are never off-screen.
+        // The default 1440x920 doesn't fit every screen (e.g. a 1280x720 panel at
+        // 150% scaling reports ~850x460 DIPs). Clamp to the work area so no window
+        // button is pushed off-screen, and start maximised when the panel is small
+        // enough that a floating window would be cramped.
         var area = SystemParameters.WorkArea;
         Width = Math.Min(Width, area.Width - 20);
         Height = Math.Min(Height, area.Height - 20);
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        if (area.Width < 1200 || area.Height < 760) WindowState = WindowState.Maximized;
 
         PreviewKeyDown += OnPreviewKeyDown;
-        LoadSample();
+        StateChanged += (_, _) => MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "□";
+        UpdateZoomLabel();
+        ShowEmpty();
     }
 
     private static Brush Frozen(Color color)
@@ -62,11 +81,60 @@ public partial class MainWindow : Window
         return brush;
     }
 
+    // ---------- window chrome ----------
+
+    private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2)
+        {
+            ToggleMaximize();
+            return;
+        }
+
+        if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            try { DragMove(); }
+            catch (InvalidOperationException) { /* drag ended early; nothing to do */ }
+        }
+    }
+
+    private void MinBtn_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void MaxBtn_Click(object sender, RoutedEventArgs e) => ToggleMaximize();
+
+    private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void ToggleMaximize() =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
     // ---------- paper lifecycle ----------
 
-    private void LoadSample()
+    private void ShowEmpty()
     {
-        TrySetPaper(EnglishSamplePaper.Create(), path: null);
+        EmptyState.Visibility = Visibility.Visible;
+        SectionList.ItemsSource = null;
+        ClearSection();
+        SubtitleText.Text = ".lmm 试卷 · 未打开";
+        Title = "ExamReview";
+        UpdateStatus("就绪");
+    }
+
+    private void OpenPath(string path)
+    {
+        try
+        {
+            var paper = _reader.Read(path);
+            if (TrySetPaper(paper, path))
+                UpdateStatus($"已打开：{path}");
+        }
+        catch (LmmFormatException ex)
+        {
+            MessageBox.Show(this, ex.Message, "文件格式错误", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(this, ex.Message, "无法读取文件", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private bool TrySetPaper(Paper paper, string? path)
@@ -87,6 +155,8 @@ public partial class MainWindow : Window
         _dirty = false;
         _selectedQuestionNumber = 0;
         Title = $"{paper.Title} — {module.DisplayName} — ExamReview";
+        SubtitleText.Text = string.IsNullOrWhiteSpace(path) ? $"{paper.Title} · 未保存" : Path.GetFileName(path);
+        EmptyState.Visibility = Visibility.Collapsed;
 
         var entries = paper.Sections.Select(s => new SectionEntry(s)).ToList();
         SectionList.ItemsSource = entries;
@@ -109,21 +179,49 @@ public partial class MainWindow : Window
             Filter = "ExamReview 试卷 (*.lmm)|*.lmm|所有文件 (*.*)|*.*",
         };
         if (dialog.ShowDialog(this) != true) return;
+        OpenPath(dialog.FileName);
+    }
 
+    private void Import_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ConfirmDiscard()) return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "从文本导入试卷",
+            Filter = "试卷文本 (*.txt;*.md)|*.txt;*.md|所有文件 (*.*)|*.*",
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        ImportPath(dialog.FileName);
+    }
+
+    private void ImportPath(string path)
+    {
+        ImportResult result;
         try
         {
-            var paper = _reader.Read(dialog.FileName);
-            if (TrySetPaper(paper, dialog.FileName))
-                UpdateStatus($"已打开：{dialog.FileName}");
-        }
-        catch (LmmFormatException ex)
-        {
-            MessageBox.Show(this, ex.Message, "文件格式错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            result = PaperTextImporter.ParseFile(path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             MessageBox.Show(this, ex.Message, "无法读取文件", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
         }
+
+        if (result.Notes.Count > 0)
+        {
+            MessageBox.Show(this,
+                "导入时有这些情况需要留意：" + Environment.NewLine + Environment.NewLine +
+                string.Join(Environment.NewLine, result.Notes.Select(n => "• " + n)),
+                "导入提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        if (!TrySetPaper(result.Paper, path: null)) return;
+
+        _dirty = true;
+        var section = result.Paper.Sections.FirstOrDefault();
+        UpdateStatus($"已导入：{Path.GetFileName(path)}" +
+                     (section is null ? "" : $"（{section.Questions.Count} 题，{section.Article?.Paragraphs.Count ?? 0} 段）"));
     }
 
     private void SavePaper_Click(object sender, RoutedEventArgs e)
@@ -158,6 +256,7 @@ public partial class MainWindow : Window
             _writer.Write(_paper, path);
             _path = path;
             _dirty = false;
+            SubtitleText.Text = Path.GetFileName(path);
             UpdateStatus($"已保存：{path}");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -183,15 +282,8 @@ public partial class MainWindow : Window
 
         var warnings = issues.Count(i => i.Severity == ValidationSeverity.Warning);
         if (warnings > 0)
-            StatusText.Text = $"校验通过，{warnings} 条提醒；正在保存…";
+            UpdateStatus($"校验通过，{warnings} 条提醒；正在保存…");
         return true;
-    }
-
-    private void NewSample_Click(object sender, RoutedEventArgs e)
-    {
-        if (!ConfirmDiscard()) return;
-        LoadSample();
-        UpdateStatus("已载入内置示例卷");
     }
 
     private bool ConfirmDiscard()
@@ -222,7 +314,41 @@ public partial class MainWindow : Window
                 SavePaper_Click(sender, e);
                 e.Handled = true;
                 break;
+            case Key.I:
+                Import_Click(sender, e);
+                e.Handled = true;
+                break;
         }
+    }
+
+    /// <summary>Open (or import) a file from the command line or a shell drop.</summary>
+    public void OpenExternal(string path)
+    {
+        if (path.EndsWith(".lmm", StringComparison.OrdinalIgnoreCase)) OpenPath(path);
+        else if (path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
+                 path.EndsWith(".md", StringComparison.OrdinalIgnoreCase)) ImportPath(path);
+        else UpdateStatus($"不支持的文件类型：{Path.GetFileName(path)}");
+    }
+
+    // ---------- drag & drop ----------
+
+    private void Window_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void Window_Drop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0) return;
+        e.Handled = true;
+        if (!ConfirmDiscard()) return;
+
+        var file = files[0];
+        if (file.EndsWith(".lmm", StringComparison.OrdinalIgnoreCase)) OpenPath(file);
+        else if (file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
+                 file.EndsWith(".md", StringComparison.OrdinalIgnoreCase)) ImportPath(file);
+        else UpdateStatus($"不支持的文件类型：{Path.GetFileName(file)}");
     }
 
     // ---------- section rendering ----------
@@ -239,7 +365,8 @@ public partial class MainWindow : Window
     private void ClearSection()
     {
         _section = null;
-        ArticleHeader.Text = "";
+        ArticleTitle.Text = "";
+        ArticleMeta.Text = "";
         ArticlePanel.Children.Clear();
         QuestionList.ItemsSource = null;
         DetailPanel.Children.Clear();
@@ -253,16 +380,10 @@ public partial class MainWindow : Window
     {
         if (_section is null) { ClearSection(); return; }
 
-        ArticleHeader.Text = string.IsNullOrWhiteSpace(_section.Gist)
-            ? $"{_section.Title}  ·  {_section.Meta}"
-            : $"{_section.Title}  ·  {_section.Meta}\n{_section.Gist}";
-        ArticleHeader.TextWrapping = TextWrapping.Wrap;
-        ArticleHeader.Inlines.Clear();
-        ArticleHeader.Inlines.Add(new Run($"{_section.Title}   ") { FontWeight = FontWeights.SemiBold, FontSize = 16 });
-        if (!string.IsNullOrWhiteSpace(_section.Meta))
-            ArticleHeader.Inlines.Add(new Run(_section.Meta + "   ") { Foreground = MutedBrush });
-        if (!string.IsNullOrWhiteSpace(_section.Gist))
-            ArticleHeader.Inlines.Add(new Run("\n" + _section.Gist) { Foreground = MutedBrush });
+        ArticleTitle.Text = _section.Title;
+        ArticleMeta.Text = string.IsNullOrWhiteSpace(_section.Gist)
+            ? _section.Meta
+            : $"{_section.Meta}    {_section.Gist}";
 
         RenderArticle();
 
@@ -283,14 +404,18 @@ public partial class MainWindow : Window
         ArticlePanel.Children.Clear();
         if (_section?.Article is null) return;
 
+        double bodySize = 17 * _zoom;
+        double lineHeight = 32 * _zoom;
+
         foreach (var paragraph in _section.Article.Paragraphs.OrderBy(p => p.Index))
         {
             var block = new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap,
-                FontSize = 15,
-                LineHeight = 27,
-                Margin = new Thickness(0, 0, 0, 14),
+                FontSize = bodySize,
+                LineHeight = lineHeight,
+                Foreground = InkBrush,
+                Margin = new Thickness(0, 0, 0, 16 * _zoom),
                 FontFamily = new FontFamily("Georgia, Cambria, Segoe UI"),
             };
 
@@ -341,63 +466,75 @@ public partial class MainWindow : Window
             Text = $"第 {question.Number} 题" + (string.IsNullOrWhiteSpace(question.SkillTag) ? "" : $"  ·  {question.SkillTag}"),
             FontWeight = FontWeights.Bold,
             FontSize = 14,
-            Margin = new Thickness(0, 4, 0, 6),
+            Foreground = InkBrush,
+            Margin = new Thickness(0, 2, 0, 8),
         });
 
-        DetailPanel.Children.Add(Body(question.Stem));
+        DetailPanel.Children.Add(Body(question.Stem, 14.5));
 
-        if (_module is not null && question.Options.Count > 0)
+        if (question.Options.Count > 0)
         {
-            var handler = _module.ResolveHandler(GuessQuestionType(question));
-            if (handler.CreateReviewViewModel(question) is IQuestionCardViewModel card)
+            foreach (var option in question.Options)
             {
-                foreach (var option in card.Options)
+                var line = new TextBlock
                 {
-                    var line = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 2), FontSize = 13 };
-                    var isAnswer = string.Equals(option.Letter?.Trim(), card.CorrectAnswer?.Trim(), StringComparison.OrdinalIgnoreCase);
-                    line.Inlines.Add(new Run(option.Letter + ". ") { FontWeight = FontWeights.SemiBold, Foreground = isAnswer ? CorrectBrush : null });
-                    line.Inlines.Add(new Run(option.Text) { Foreground = isAnswer ? CorrectBrush : null });
-                    DetailPanel.Children.Add(line);
-                }
-
-                DetailPanel.Children.Add(SectionLabel($"答案：{card.CorrectAnswer}"));
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 3, 0, 3),
+                    FontSize = 13.5,
+                };
+                var isAnswer = _revealAll &&
+                               string.Equals(option.Letter?.Trim(), question.CorrectAnswer?.Trim(), StringComparison.OrdinalIgnoreCase);
+                line.Inlines.Add(new Run(option.Letter + ". ")
+                {
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = isAnswer ? CorrectBrush : InkBrush,
+                });
+                line.Inlines.Add(new Run(option.Text) { Foreground = isAnswer ? CorrectBrush : InkBrush });
+                DetailPanel.Children.Add(line);
             }
         }
-        else if (!string.IsNullOrWhiteSpace(question.CorrectAnswer))
+
+        if (!_revealAll)
         {
-            DetailPanel.Children.Add(SectionLabel($"答案：{question.CorrectAnswer}"));
+            DetailPanel.Children.Add(new TextBlock
+            {
+                Text = "答案与解析已隐藏 · 顶部「显示全部答案」可一键展开",
+                FontSize = 12,
+                Foreground = MutedBrush,
+                Margin = new Thickness(0, 10, 0, 0),
+                TextWrapping = TextWrapping.Wrap,
+            });
+            return;
         }
 
+        if (!string.IsNullOrWhiteSpace(question.CorrectAnswer))
+            DetailPanel.Children.Add(SectionLabel($"答案：{question.CorrectAnswer}", CorrectBrush));
+
         if (!string.IsNullOrWhiteSpace(question.Explanation))
-            DetailPanel.Children.Add(SectionLabel("解析\n" + question.Explanation));
+            DetailPanel.Children.Add(SectionLabel("解析" + Environment.NewLine + question.Explanation));
 
         if (!string.IsNullOrWhiteSpace(question.DistractorAnalysis))
-            DetailPanel.Children.Add(SectionLabel("干扰项分析\n" + question.DistractorAnalysis));
+            DetailPanel.Children.Add(SectionLabel("干扰项分析" + Environment.NewLine + question.DistractorAnalysis));
     }
 
-    private string GuessQuestionType(Question question)
-    {
-        if (_section?.TypeId == "cloze") return EnglishQuestionTypes.ClozeChoice;
-        if (_section?.TypeId == "seven-of-five") return EnglishQuestionTypes.SevenOfFive;
-        return EnglishQuestionTypes.ReadingChoice;
-    }
-
-    private static TextBlock Body(string text) => new()
+    private static TextBlock Body(string text, double size = 14) => new()
     {
         Text = text,
         TextWrapping = TextWrapping.Wrap,
-        FontSize = 14,
-        LineHeight = 23,
+        FontSize = size,
+        LineHeight = size * 1.65,
+        Foreground = InkBrush,
         Margin = new Thickness(0, 0, 0, 6),
     };
 
-    private static TextBlock SectionLabel(string text) => new()
+    private static TextBlock SectionLabel(string text, Brush? foreground = null) => new()
     {
         Text = text,
         TextWrapping = TextWrapping.Wrap,
         FontSize = 13,
+        LineHeight = 21,
         Margin = new Thickness(0, 10, 0, 0),
-        Foreground = Frozen(Color.FromRgb(0x44, 0x44, 0x44)),
+        Foreground = foreground ?? Frozen(Color.FromRgb(0x44, 0x44, 0x44)),
     };
 
     private void RenderStructure()
@@ -413,10 +550,10 @@ public partial class MainWindow : Window
 
         foreach (var row in _section.Structure)
         {
-            var block = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10), FontSize = 13 };
-            block.Inlines.Add(new Run(row.ParaLabel + "  ") { FontWeight = FontWeights.Bold });
-            block.Inlines.Add(new Run(row.Function + "  ") { Foreground = Brushes.SteelBlue });
-            block.Inlines.Add(new Run(row.ContentNote));
+            var block = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12), FontSize = 13.5, LineHeight = 22 };
+            block.Inlines.Add(new Run(row.ParaLabel + "  ") { FontWeight = FontWeights.Bold, Foreground = InkBrush });
+            block.Inlines.Add(new Run(row.Function + "  ") { Foreground = Frozen(Color.FromRgb(0x0D, 0x5A, 0x53)) });
+            block.Inlines.Add(new Run(row.ContentNote) { Foreground = InkBrush });
             if (row.QuestionRefs.Count > 0)
                 block.Inlines.Add(new Run($"  → 第 {string.Join("、", row.QuestionRefs)} 题") { Foreground = MutedBrush });
             StructurePanel.Children.Add(block);
@@ -430,7 +567,7 @@ public partial class MainWindow : Window
 
         if (_section.Bilingual.Count == 0)
         {
-            BilingualPanel.Children.Add(Body("这一节没有中英对照。"));
+            BilingualPanel.Children.Add(Body("这一节还没有中英对照。切到「中英对照」后点「机翻本节」可由 MyMemory 自动生成，并随试卷保存。"));
             return;
         }
 
@@ -441,16 +578,19 @@ public partial class MainWindow : Window
                 Text = pair.En,
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 14,
+                LineHeight = 23,
+                Foreground = InkBrush,
                 FontFamily = new FontFamily("Georgia, Segoe UI"),
-                Margin = new Thickness(0, 6, 0, 2),
+                Margin = new Thickness(0, 8, 0, 3),
             });
             BilingualPanel.Children.Add(new TextBlock
             {
                 Text = pair.Zh,
                 TextWrapping = TextWrapping.Wrap,
-                FontSize = 13,
+                FontSize = 13.5,
+                LineHeight = 23,
                 Foreground = MutedBrush,
-                Margin = new Thickness(0, 0, 0, 8),
+                Margin = new Thickness(0, 0, 0, 10),
             });
         }
     }
@@ -472,8 +612,9 @@ public partial class MainWindow : Window
             {
                 Text = drill.Heading,
                 FontWeight = FontWeights.SemiBold,
-                FontSize = 13,
-                Margin = new Thickness(0, 8, 0, 2),
+                FontSize = 13.5,
+                Foreground = InkBrush,
+                Margin = new Thickness(0, 10, 0, 4),
             });
             DrillPanel.Children.Add(Body(drill.Question));
             DrillPanel.Children.Add(new TextBlock
@@ -482,8 +623,70 @@ public partial class MainWindow : Window
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 13,
                 Foreground = CorrectBrush,
-                Margin = new Thickness(0, 0, 0, 8),
+                Margin = new Thickness(0, 0, 0, 10),
             });
+        }
+    }
+
+    // ---------- view options ----------
+
+    private void RevealToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        _revealAll = RevealToggle.IsChecked == true;
+        RevealToggle.Content = _revealAll ? "隐藏全部答案" : "显示全部答案";
+        if (QuestionList.SelectedItem is QuestionEntry entry) RenderDetail(entry.Question);
+    }
+
+    private void ZoomIn_Click(object sender, RoutedEventArgs e) => SetZoom(_zoom + 0.1);
+
+    private void ZoomOut_Click(object sender, RoutedEventArgs e) => SetZoom(_zoom - 0.1);
+
+    private void SetZoom(double zoom)
+    {
+        _zoom = Math.Clamp(Math.Round(zoom, 2), 0.8, 2.0);
+        UpdateZoomLabel();
+        RenderArticle();
+    }
+
+    private void UpdateZoomLabel() => ZoomText.Text = $"{_zoom * 100:0}%";
+
+    // ---------- translation ----------
+
+    private async void Translate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_section?.Article is null || _section.Article.Paragraphs.Count == 0)
+        {
+            UpdateStatus("这一节没有文章可翻译。");
+            return;
+        }
+
+        var section = _section;
+        TranslateBtn.IsEnabled = false;
+        TranslateHint.Text = $"{_translator.Name} 翻译中…";
+
+        try
+        {
+            var pairs = new List<BilingualPair>();
+            foreach (var paragraph in section.Article.Paragraphs.OrderBy(p => p.Index))
+            {
+                var zh = await _translator.TranslateAsync(paragraph.Text, "en", "zh-CN");
+                pairs.Add(new BilingualPair { En = paragraph.Text, Zh = zh });
+            }
+
+            section.Bilingual.Clear();
+            section.Bilingual.AddRange(pairs);
+            _dirty = true;
+            RenderBilingual();
+            RightTabs.SelectedIndex = 2;
+            TranslateHint.Text = $"已翻译 {pairs.Count} 段（{_translator.Name}）";
+        }
+        catch (Exception ex) when (ex is TranslationException or HttpRequestException or TaskCanceledException)
+        {
+            TranslateHint.Text = "翻译失败：" + ex.Message;
+        }
+        finally
+        {
+            TranslateBtn.IsEnabled = true;
         }
     }
 
@@ -515,57 +718,75 @@ public partial class MainWindow : Window
         UpdateStatus("已添加一笔批注");
     }
 
+    private void UndoInk_Click(object sender, RoutedEventArgs e)
+    {
+        if (_paper is null || _section is null) return;
+
+        var last = _paper.InkStrokes.LastOrDefault(s =>
+            string.Equals(s.Anchor.SectionId, _section.Id, StringComparison.Ordinal));
+        if (last is null)
+        {
+            UpdateStatus("这一节没有可撤销的笔迹");
+            return;
+        }
+
+        _paper.InkStrokes.Remove(last);
+        RenderInk();
+        _dirty = true;
+        UpdateStatus("已撤销一笔");
+    }
+
     private void ClearInk_Click(object sender, RoutedEventArgs e)
     {
         if (_paper is null || _section is null) return;
 
-        var removed = _paper.InkStrokes.RemoveAll(s => string.Equals(s.Anchor.SectionId, _section.Id, StringComparison.Ordinal));
-        if (removed == 0) return;
-
-        InkCanvas.ClearInk();
-        _dirty = true;
-        UpdateStatus($"已清除本节 {removed} 笔批注");
+        var removed = _paper.InkStrokes.RemoveAll(s =>
+            string.Equals(s.Anchor.SectionId, _section.Id, StringComparison.Ordinal));
+        RenderInk();
+        if (removed > 0) _dirty = true;
+        UpdateStatus(removed > 0 ? $"已清除本节 {removed} 笔" : "这一节没有笔迹");
     }
 
     // ---------- misc ----------
 
     private void UpdateStatus(string? message = null)
     {
-        if (_paper is null || _module is null)
+        if (message is not null)
         {
-            StatusText.Text = message ?? "就绪";
+            StatusText.Text = message;
             return;
         }
 
-        var parts = new List<string> { message ?? _paper.Title };
-        parts.Add($"模块：{_module.DisplayName}");
-        if (_section is not null) parts.Add($"章节：{_section.Title}");
-        parts.Add(_dirty ? "未保存" : "已保存");
-        StatusText.Text = string.Join("    ", parts);
+        StatusText.Text = _paper is null
+            ? "就绪"
+            : $"{_paper.Sections.Count} 节 · {_paper.Sections.Sum(s => s.Questions.Count)} 题" +
+              (_dirty ? " · 未保存" : "");
     }
 
     private static string SanitizeFileName(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
-        var cleaned = new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
-        return string.IsNullOrEmpty(cleaned) ? "paper" : cleaned;
+        var clean = new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
+        return string.IsNullOrWhiteSpace(clean) ? "paper" : clean;
     }
+}
 
-    public sealed class SectionEntry(Section section)
-    {
-        public Section Section { get; } = section;
+internal sealed class SectionEntry(Section section)
+{
+    public Section Section { get; } = section;
 
-        public string Header => string.IsNullOrWhiteSpace(Section.Title) ? Section.Id : Section.Title;
+    public string Header => string.IsNullOrWhiteSpace(Section.Title) ? Section.Id : Section.Title;
 
-        public string Sub => string.IsNullOrWhiteSpace(Section.Meta) ? Section.TypeId : $"{Section.TypeId} · {Section.Meta}";
-    }
+    public string Sub => string.IsNullOrWhiteSpace(Section.Meta) ? Section.TypeId : $"{Section.TypeId} · {Section.Meta}";
+}
 
-    public sealed class QuestionEntry(Question question)
-    {
-        public Question Question { get; } = question;
+internal sealed class QuestionEntry(Question question)
+{
+    public Question Question { get; } = question;
 
-        public string Header => $"Q{Question.Number}" + (string.IsNullOrWhiteSpace(Question.SkillTag) ? "" : $" · {Question.SkillTag}");
+    public string Header => string.IsNullOrWhiteSpace(Question.SkillTag)
+        ? $"第 {Question.Number} 题"
+        : $"第 {Question.Number} 题 · {Question.SkillTag}";
 
-        public string Preview => Question.Stem ?? "";
-    }
+    public string Preview => Question.Stem;
 }

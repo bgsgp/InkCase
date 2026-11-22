@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\Lmm.Plugins.English\Lmm.Plugins.English.csproj" />
@@ -18,6 +18,8 @@
     <!-- Allows restore/build to proceed on non-Windows dev machines (e.g. this Linux container).
          Actual WPF compilation/run still requires Windows + VS2026. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- Per-monitor DPI awareness; see app.manifest. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
 </Project>

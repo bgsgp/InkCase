@@ -12,7 +12,10 @@ public class RibbonBuilderTests
 
         var polygon = RibbonBuilder.BuildPolygonPx(p, baseWidth: 3.0, live: false, wf);
 
-        Assert.Equal(p.Count * 2, polygon.Count);
+        // Two rails plus a rounded cap arc at each end, so strictly more
+        // vertices than the plain 2*n extrusion.
+        Assert.True(polygon.Count > p.Count * 2, $"got {polygon.Count}");
+        Assert.All(polygon, pt => Assert.False(double.IsNaN(pt.X) || double.IsNaN(pt.Y)));
     }
 
     [Fact]
@@ -30,7 +33,7 @@ public class RibbonBuilderTests
 
         var polygon = RibbonBuilder.BuildPolygonPx(p, baseWidth: 3.0, live: false, wf: null);
 
-        Assert.Equal(p.Count * 2, polygon.Count);
+        Assert.True(polygon.Count > p.Count * 2, $"got {polygon.Count}");
         Assert.All(polygon, pt =>
         {
             Assert.False(double.IsNaN(pt.X));
@@ -51,7 +54,7 @@ public class RibbonBuilderTests
 
         var polygon = RibbonBuilder.BuildPolygon(beautified!, canvasW, canvasH);
 
-        Assert.Equal(beautified!.FractionalPoints.Count * 2, polygon.Count);
+        Assert.True(polygon.Count > beautified!.FractionalPoints.Count * 2);
         Assert.All(polygon, pt => Assert.InRange(pt.X, -50, canvasW + 50));
     }
 }

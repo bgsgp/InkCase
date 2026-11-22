@@ -11,6 +11,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Lmm.Core.Tests/Lmm.Core.Tests.csproj" />
     <Project Path="tests/Lmm.Format.Tests/Lmm.Format.Tests.csproj" />
+    <Project Path="tests/Lmm.Import.Tests/Lmm.Import.Tests.csproj" />
     <Project Path="tests/Lmm.Plugins.English.Tests/Lmm.Plugins.English.Tests.csproj" />
   </Folder>
 </Solution>
