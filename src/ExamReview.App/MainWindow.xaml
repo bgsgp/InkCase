@@ -296,6 +296,7 @@
                                      VirtualizingPanel.IsVirtualizing="True"
                                      VirtualizingPanel.VirtualizationMode="Recycling"
                                      ScrollViewer.CanContentScroll="True"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      SelectionChanged="QuestionList_SelectionChanged">
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">

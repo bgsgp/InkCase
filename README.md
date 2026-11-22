@@ -154,6 +154,27 @@ Catmull-Rom 拟合）是从旧版 HTML/JS 应用的 `beautifyStroke`/`finishStro
 - 发布一律 **框架依赖**（`--self-contained false`）：目标机器需要装 .NET 10
   桌面运行时（`Microsoft.WindowsDesktop.App` 10.x）。不要改成 self-contained。
 
+## 从旧课件 HTML 抠一份示范卷
+
+程序本身不带任何试卷（空壳原则），但仓库里带一个转换脚本，可以把**旧版课件
+HTML**（单文件课件里存着 `PRELOAD = {"papers": [...]}` 那个大 JSON）里的
+试卷导成 `.lmm`，用来做示范数据：
+
+```bash
+python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./示例 --papers demo,pmwke0e8y2yi
+python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./示例 --all
+```
+
+它做的事：`tab` → `typeId`（阅读 A/B/C/D→`reading-c`、七选五→`seven-of-five`、
+完形填空→`cloze`、语法填空→`grammar-fill`）；文章 HTML 里的
+`<span class="hl" data-q="N">` / `<span class="blank">` → `Paragraph.Spans`
+（偏移相对纯文本，不是 HTML 偏移）；`qs/bi/drill/structure` 里的
+`<em>/<b>/<br>` 与 `<span style="color:#8b9198">（约 N 词）</span>` 一律去标签
+留文字；`<p class="byline">` 丢掉（它和 `section.meta` 重复）；完形章节里
+字面写的 `___41___` 提升成 `blank` span，否则挖空既不显示也没法从题号跳过去。
+
+注意源数据本身可能没填答案——那种卷子能正常打开，但保存前会被校验拦住
+（选择题答案必须在选项里），校验报告会列出具体是哪些题。
 ## 已完成 / 未完成
 
 **已完成：**
