@@ -13,7 +13,7 @@ public class InkGeometryTests
         var segs = InkGeometry.CornerSplit(p);
 
         Assert.Equal(2, segs.Count);
-        // The corner point is duplicated between the two segments (see StrokeBeautifier
+        // The corner point is duplicated between the two segments (see InkGeometry.CornerSplit
         // remarks): last point of segment 1 and first point of segment 2 must both be
         // (approximately) the checkmark's vertex, and segment boundaries land near it.
         Assert.True(PointsClose(segs[0][^1], p[cornerIdx]));

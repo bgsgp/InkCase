@@ -90,48 +90,60 @@ public interface IQuestionTypeHandler {
 降级或崩溃——这是模块独立分发后真实会发生的失败场景，第一版就要把这条
 错误路径做对。
 
-## 手写笔迹"美化"算法
+## 手写笔迹：六种笔（照搬 xnotes）
 
-`Lmm.Core/Ink/` 下的 `InkGeometry` / `StrokeBeautifier` / `InkRibbon` /
-`InkWidths` / `RibbonBuilder` 分两代：几何部分（重采样、角点识别、
-Catmull-Rom 拟合）是从旧版 HTML/JS 应用的 `beautifyStroke`/`finishStroke`
-逐变量移植的；**笔宽/描边**那部分在第二轮里换掉了旧版的"固定锥度拉伸"，
-改成参照 [shardulvs/xnotes-android](https://github.com/shardulvs/xnotes-android)
-的变宽缎带模型（沿中心线扫一个半径变化的圆盘，因此圆帽、圆连接、压感变粗
-是天然结果，而不是事后补的锥度）。旧实现被否掉的原因是它只会"整体等宽 +
-两端收窄"，写出来的板书像马克笔描的等宽线，没有笔锋。
+笔迹算法在 `Lmm.Core/Ink/`，分层是：`InkEngine`（点 → 中心线 + 逐点半宽）→
+`InkRibbon`（中心线 + 半宽 → 轮廓多边形）→ 画布 `StreamGeometry`。`InkBuilder`
+把"采集到的原始点/压力/时间戳"串成这两步，产出存进 `.lmm` 的
+`InkStroke`（中心线 + 宽度倍数，轮廓每次渲染现算，缩放不变糊）。
 
-旧几何部分踩过两个容易再踩一次的坑：
+**这一版是照 [shardulvs/xnotes-android](https://github.com/shardulvs/xnotes-android)
+的 `StrokeEngine` 逐常数移植的**（`core/stroke/StrokeEngine.kt`），不是自己发明
+的笔宽模型。旧版那条"整体等宽 + 两端收窄"的固定锥度写法已经删掉——它写出来的
+板书像马克笔描的等宽线，没有笔锋，这也是这次重做的直接原因。
 
-1. **角点识别**：早期按局部转弯角度判断"尖角"，会把连笔手写里又急又圆
-   的转弯误判成尖角，拼接处描边拧成针眼状死结，手写签名变成锯齿。现在
-   用 `CornerSplit`：先做 Douglas-Peucker 化简（`SimplifyDpIndices`），
-   只有"化简后存活 + 前后臂长都够长（真正由两段直笔画夹出的角，如打勾/
-   叉号/箭头）"才切；连笔书法本身没有直笔画，不会被误伤。**不要**把这个
-   判断换回纯角度阈值。
-2. **段与段交界处不去重**：`StrokeBeautifier` 里 `cornerSplit` 切出的
-   段拼接时故意保留重复的角点（两份，不 `.slice(1)`）。缎带描边
-   （`RibbonBuilder`）是按"前一点→后一点"算法线方向的，角点如果只留一
-   份，两段的方向会在同一点上互相抵消，描边在尖角处会拧成一个针眼状的
-   死结。**不要**为了"去重更干净"而合并这个重复点。
+工具栏六支笔，对应 `InkStyle.For(...)` 的工厂参数（`InkTool` 枚举）：
 
-`Lmm.Core.Tests/Ink/` 下的测试（`InkGeometryTests`/`StrokeBeautifierTests`/
-`RibbonBuilderTests`/`InkRibbonTests`）就是这些坑的回归用例（打勾角点识别、
-连笔圆滑不误切、抖动鲁棒性、重复角点不产生 NaN、宽度因子确实产生粗细变化）
-——修改这段算法后务必跑一遍。
+| 笔 | baseWidth | 压感 | 关键参数 | 效果 |
+|---|---|---|---|---|
+| 钢笔 pen | 3.0 | 开 | pressureMinFactor 0.35 | 压感细粗 + 起收笔保持压力（holdEnds） |
+| 虚线 dashed | 3.0 | 关 | dashLength 10 / dashGap 8 | 等宽虚线，沿弧长切段 |
+| 书法 calligraphy | 6.0 | 开 | directionStrength 0.60 | 横细竖粗，斜切粗块，反折补笔 |
+| 速度 speed | 4.0 | 开 | speedStrength 0.8 | 快细慢粗（窗口 ±25ms，triweight 模糊） |
+| 收锋 taper | 4.0 | 开 | taperEnabled, taperMinFactor 0.50 | 起笔粗、收笔尖 |
+| 荧光 highlighter | 16.0 | 关 | AlphaScale 0.45 | 半透明粗带（holdEnds） |
 
-笔宽模型（`InkWidths`）：`width = base/2 * 宽度因子 * 端部锥度`。宽度因子来自
-两路输入——速度（`(中位速度/当前速度)**0.38`，慢则粗，限幅 0.60–1.30）和
-压感（只在输入设备真的给出压力变化时启用，走 logistic 曲线）。端部锥度在
-前/后各 12% 的弧长上降到 0.34，正在写的那一笔（live）只降到 0.75，收笔前
-不会突然变细。速度 EMA 必须用第一个非零速度做种子，从 0 起算会让每一笔的
-开头都被判成"极慢"从而最粗——这个 bug 已经修过，别退回去。
+唯一偏离 xnotes 的地方是荧光笔：xnotes 用 `MULTIPLY` 混合 + alpha 0.90，
+WPF 的 `DrawingContext` 只有 source-over，0.9 会直接把字盖住，所以压到 0.45
+（`InkStyle.cs` 里有注释说明）。
+
+算法要点（改之前先读 `InkEngine.cs` 的常量区）：
+
+- 平滑是**按弧长**的 EMA（`EmaByArc`，`lambda = 1.5px`），用"指数积分的精确
+  解"算，不是逐点一阶低通——采样间隔不均匀时后者会糊。
+- 半宽 `h = base/2 * (m + (1-m)*logistic(pressure, k=8)) * direction/2`，书法笔的
+  `direction = max(1 + ds*ty, 0.1)`，`ty` 是该点相对笔画走向的竖直分量。
+- 书法笔的笔尖方向 `NibDirection` 是**限速**追目标（`limit = step*2/rate`），
+  否则转折处笔尖会瞬间翻转，看着像换了一支笔；反折 120°–160° 且持续按住时
+  才"补笔"跳厚。
+- `holdEnds`（钢笔/荧光笔）把首尾各 4 个采样点的压力提到内侧的值，只升不降
+  ——不然手写板在落笔/抬笔那一下压力掉 0，两端会出现针尖。
+- 收锋笔另有 `capTail`：末端窗口内只许变细不许回升，否则收笔会出现小鼓包。
+- 单点（轻点）是实心圆，书法笔的点用 `DotDirY = 1.5` 拉成扁点。
+
+**填充规则是 nonzero，不是 even-odd。** 闭合笔迹（圈词）两端圆帽会自重叠，
+even-odd 下重叠区互相抵消，圈上会出现一个白色缺口；nonzero 下重叠取并集就
+没有。`InkCanvasElement.ToGeometry` 里 `FillRule = FillRule.Nonzero` 是修过的
+bug，别改回去。（为它专门加过的"闭合笔迹跳过圆帽"分支也因此删掉了。）
+
+`Lmm.Core.Tests/Ink/` 下的 `InkEngineTests`（8 例）、`InkRibbonTests`（4 例）、
+`InkBuilderTests`（4 例）、`InkGeometryTests` 是这批坑的回归用例，改算法后务必跑。
 
 ## 性能：WPF 怎么保证不卡
 
 笔迹渲染目前是自定义 `FrameworkElement` + `OnRender`（`Controls/InkCanvasElement.cs`）：
-每笔一次 `StrokeBeautifier.Beautify`，把结果多边形塞进 `StreamGeometry` 画出来；
-正在写的那一笔也走同一套 `InkRibbon.Build(live: true)`，所以落笔时看到的粗细
+每笔一次 `InkEngine.Build` + `InkRibbon.Build`，把结果多边形塞进 `StreamGeometry`
+画出来；正在写的那一笔也走同一套 `InkEngine.Build(finished: false)`，所以落笔时看到的粗细
 和松手后一致（旧版这里画的是细线预览，抬笔会"跳"一下）。所有
 `Brush`/`Pen`/`Geometry` `.Freeze()` 复用。长列表（题目侧栏）必须正确启用虚拟化
 （`VirtualizingPanel.IsVirtualizing` + `VirtualizationMode="Recycling"`，
@@ -187,9 +199,10 @@ python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./
       （`IMigrationStep`/`MigrationRunner`，目前无迁移步骤）
 - [x] Phase 2a：笔迹美化几何库（`Lmm.Core/Ink/`），含 xUnit 测试
       （`ResamplePts` 的弧长累加 bug 已修）
-- [x] Phase 2b：变宽笔迹（`InkWidths`/`InkRibbon`，压感+速度+端部锥度，
-      圆帽圆连接）+ WPF `InkCanvasElement`（Stylus 取压力与时间戳，live 与
-      落笔同一套渲染），笔迹按节存入 `.lmm`；离屏渲染截图验证过
+- [x] Phase 2b：六种笔（`InkStyle`/`InkEngine`/`InkRibbon`，照 xnotes 的
+      压感/速度/书法笔尖/收锋模型，圆帽圆连接）+ WPF `InkCanvasElement`
+      （Stylus 取压力与时间戳，live 与落笔同一套渲染），笔迹按节连同笔种
+      存入 `.lmm`；六种笔离屏渲染截图验证过
 - [x] 插件契约（`Lmm.Plugins.Abstractions`）：`ISubjectModule`、
       `IQuestionTypeHandler`、`IModuleCatalog`/`ManualModuleCatalog`、
       `SubjectCapabilities`、`ValidationResult`、题目卡片视图模型
@@ -262,4 +275,3 @@ Windows 机器上做过：
   - **静默退出**：`WinExe` 没有控制台，异常会无声消失（WER 也不一定留痕）。
     已加 `crash.log`；再有"窗口一闪就没了"，先看
     `%APPDATA%\ExamReview\crash.log`。
-

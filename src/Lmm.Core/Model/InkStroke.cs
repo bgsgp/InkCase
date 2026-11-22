@@ -1,12 +1,12 @@
 namespace Lmm.Core.Model;
 
 /// <summary>
-/// One raw, captured handwriting stroke. Deliberately stores only the raw
-/// input points, not the beautified ribbon polygon: the ribbon is a derived
-/// value, recomputed from these points by the current ink geometry algorithm
-/// every time the paper is opened (see Lmm.Core ink-geometry library, Phase 2a).
-/// That keeps old files benefiting automatically from future algorithm
-/// improvements and keeps the file format decoupled from the renderer.
+/// One stored handwriting stroke. Deliberately stores the beautyfied centreline
+/// and the per-point width multipliers rather than the outline polygon: the
+/// outline is a derived value, rebuilt by <see cref="Ink.InkRibbon"/> on every
+/// render, so the file never depends on the current renderer's cap count or
+/// flattening. <see cref="Tool"/> names the xnotes pen it was drawn with, which
+/// is what decides alpha, dashes and whether width came from pressure, nib or speed.
 /// </summary>
 public sealed class InkStroke
 {
@@ -18,18 +18,25 @@ public sealed class InkStroke
     /// <summary>Pen color, e.g. "#D33A2C".</summary>
     public string Color { get; set; } = "#D33A2C";
 
+    /// <summary>
+    /// Ink tool id: "pen" (default), "dashed", "calligraphy", "speed", "taper"
+    /// or "highlighter". Older files without the field read as "pen".
+    /// </summary>
+    public string Tool { get; set; } = "pen";
+
     public double BaseWidth { get; set; } = 3.0;
 
     /// <summary>
-    /// Raw captured points, in fractional (0..1) coordinates relative to the
+    /// Smoothed centreline, in fractional (0..1) coordinates relative to the
     /// anchor surface — matches the legacy app's convention so strokes are
     /// unaffected by canvas zoom/resize.
     /// </summary>
     public List<InkPoint> Points { get; set; } = [];
 
     /// <summary>
-    /// Per-point width modulation factors (speed-based), same length as Points.
-    /// Multiplies BaseWidth when the ribbon polygon is (re)built.
+    /// Per-point width multipliers, same length as Points: the ribbon's radius at
+    /// that point is <c>BaseWidth / 2 * WidthFactors[i]</c>. Missing or short lists
+    /// fall back to 1.0 so hand-edited files still draw.
     /// </summary>
     public List<double> WidthFactors { get; set; } = [];
 }

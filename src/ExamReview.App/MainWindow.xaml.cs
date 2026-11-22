@@ -3,9 +3,11 @@ using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using Lmm.Core.Ink;
 using Lmm.Core.Model;
 using Lmm.Format;
 using Lmm.Import;
@@ -57,6 +59,7 @@ public partial class MainWindow : Window
         _writer = writer;
         _translator = translator;
         InitializeComponent();
+        SetInkTool(InkTool.Pen);
 
         // The default 1440x920 doesn't fit every screen (e.g. a 1280x720 panel at
         // 150% scaling reports ~850x460 DIPs). Clamp to the work area so no window
@@ -710,6 +713,49 @@ public partial class MainWindow : Window
         InkCanvas.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         InkCanvas.InkEnabled = on;
     }
+
+    private void InkStyle_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleButton button) SetInkTool(InkStyle.ParseTool(button.Tag as string));
+    }
+
+    /// <summary>
+    /// Switches pens. The picker behaves like a radio group (the buttons are plain
+    /// toggle buttons, so the handler has to enforce "exactly one checked"), and the
+    /// highlighter takes its own ink colour because a red highlighter reads as a
+    /// strike-through rather than a highlight.
+    /// </summary>
+    private void SetInkTool(InkTool tool)
+    {
+        InkCanvas.Pen = InkStyle.For(tool);
+        InkCanvas.InkColor = tool == InkTool.Highlighter
+            ? Color.FromRgb(0xE9, 0xA9, 0x3B)
+            : Color.FromRgb(0xD3, 0x3A, 0x2C);
+
+        var buttons = new (ToggleButton Button, InkTool Tool)[]
+        {
+            (InkStylePen, InkTool.Pen),
+            (InkStyleDashed, InkTool.Dashed),
+            (InkStyleCalligraphy, InkTool.Calligraphy),
+            (InkStyleSpeed, InkTool.Speed),
+            (InkStyleTaper, InkTool.Taper),
+            (InkStyleHighlighter, InkTool.Highlighter),
+        };
+        foreach (var (button, t) in buttons) button.IsChecked = t == tool;
+
+        if (InkToggle.IsChecked != true) InkToggle.IsChecked = true;
+        UpdateStatus($"笔：{ToolName(tool)}");
+    }
+
+    private static string ToolName(InkTool tool) => tool switch
+    {
+        InkTool.Dashed => "虚线",
+        InkTool.Calligraphy => "书法",
+        InkTool.Speed => "速度",
+        InkTool.Taper => "收锋",
+        InkTool.Highlighter => "荧光",
+        _ => "钢笔",
+    };
 
     private void InkCanvas_StrokeFinished(object? sender, InkStroke stroke)
     {

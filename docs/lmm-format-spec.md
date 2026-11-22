@@ -216,14 +216,15 @@ true)` 原子替换目标文件，避免崩溃导致半写坏档看起来像一�
 | `id` | 笔迹稳定标识 |
 | `anchor.sectionId` | 这笔画锚定在哪个 section 的讲评 UI 上 |
 | `color` | 笔色，如 `"#D33A2C"` |
+| `tool` | 笔种：`"pen"`（缺省）/`"dashed"`/`"calligraphy"`/`"speed"`/`"taper"`/`"highlighter"`，决定 alpha、虚线、以及宽度来自压感/笔尖/速度 |
 | `baseWidth` | 基础笔宽（像素，相对于采集时的画布尺寸） |
 | `points[]` | **原始采集点**，分数坐标（0..1，相对画布宽高），与旧版一致，不受画布缩放/DPI 影响 |
-| `widthFactors[]` | 与 `points` 等长的逐点宽度调制系数（笔速感应：慢→略粗，快→略细），由 `Lmm.Core.Ink.InkGeometry.WidthFactors` 算出 |
+| `widthFactors[]` | 与 `points` 等长的逐点**半径乘子**（该点半径 = `baseWidth/2 * widthFactors[i]`），由 `Lmm.Core.Ink.InkEngine` 按笔种算出；缺失或长度不足按 1.0 兜底 |
 
 **关键决定：只存 `points` + `widthFactors`（美化后、重采样后的点列），
 不存最终渲染用的缎带多边形。** 多边形是派生数据，每次打开文件时由
-`Lmm.Core.Ink.RibbonBuilder` 用当前算法重新算一遍。好处：以后再调美化
-算法（宽度曲线、尖角阈值等），旧文件自动享受到改进效果，文件格式也不
+`Lmm.Core.Ink.InkRibbon` 用当前算法重新算一遍。好处：以后再调美化
+算法（笔宽曲线、笔尖/收锋参数等），旧文件自动享受到改进效果，文件格式也不
 会因为"渲染器变了"而被迫升版本。
 
 > 这是实现时的默认选择，不是旧版本来就有的行为。如果需要"以前存的笔迹
@@ -231,9 +232,10 @@ true)` 原子替换目标文件，避免崩溃导致半写坏档看起来像一�
 > 缓存进去（比如加一个 `ink/polygons-NNNN.json`），这是一个需要重新
 > 决定的产品取舍，不是纯技术细节。
 
-笔迹的原始捕获点列在 `StrokeBeautifier.Beautify` 之前是"美化前"的
-`RawStroke`；写入 `.lmm` 的是美化之后的 `BeautifiedStroke`（已经过
-`resample/smooth`，不是笔尖每一次 `pointermove` 的原始采样）。
+笔迹的原始捕获点列在进 `InkBuilder.Build` 之前是"美化前"的 `RawStroke`
+（含压感与时间戳）；写入 `.lmm` 的是 `InkEngine` 处理之后的中心线 +
+逐点半径乘子（经过按弧长的 EMA 平滑与抽稀，不是笔尖每一次 `pointermove`
+的原始采样）。原始压力/时间戳不入库——它们只用于算出 `widthFactors`。
 
 ## 6. 试卷库索引（不属于 `.lmm` 格式本身）
 

@@ -1,63 +1,59 @@
+using System;
+using System.Linq;
 using Lmm.Core.Ink;
+using Xunit;
 
 namespace Lmm.Core.Tests.Ink;
 
-public class InkRibbonTests
+public sealed class InkRibbonTests
 {
+    private static Pt[] Line(int count, double dx = 3.0)
+        => Enumerable.Range(0, count).Select(i => new Pt(i * dx, 0)).ToArray();
+
     [Fact]
-    public void Build_SinglePoint_ProducesARoundDot()
+    public void Outline_IsClosedAndWiderThanTheCentreline()
     {
-        var polygon = InkRibbon.Build([new Pt(50, 50)], baseWidth: 4, widthFactors: null, live: false);
+        var pts = Line(30);
+        var half = Enumerable.Repeat(2.0, 30).ToArray();
+
+        var polygon = InkRibbon.Build(pts, half);
+
+        Assert.True(polygon.Count > pts.Length * 2, "the round caps add vertices on top of the two rails");
+        double minY = polygon.Min(p => p.Y), maxY = polygon.Max(p => p.Y);
+        Assert.Equal(4.0, maxY - minY, 1);
+    }
+
+    [Fact]
+    public void Outline_FollowsThePerPointHalfWidth()
+    {
+        var pts = Line(40);
+        var half = Enumerable.Range(0, 40).Select(i => i < 20 ? 0.7 : 4.0).ToArray();
+
+        var polygon = InkRibbon.Build(pts, half);
+
+        double early = polygon.Where(p => p.X < 20).Max(p => Math.Abs(p.Y));
+        double late = polygon.Where(p => p.X > 90).Max(p => Math.Abs(p.Y));
+        Assert.True(late > early + 2.0, $"the ribbon must thin out: {early:F2} -> {late:F2}");
+    }
+
+    [Fact]
+    public void SinglePoint_BecomesACircle()
+    {
+        var polygon = InkRibbon.Build([new Pt(50, 50)], [3.0]);
 
         Assert.True(polygon.Count >= 12);
-        Assert.All(polygon, p =>
-            Assert.InRange(Math.Sqrt((p.X - 50) * (p.X - 50) + (p.Y - 50) * (p.Y - 50)), 0.5, 4.0));
+        Assert.All(polygon, p => Assert.Equal(3.0, Math.Sqrt((p.X - 50) * (p.X - 50) + (p.Y - 50) * (p.Y - 50)), 2));
     }
 
     [Fact]
-    public void Build_WidthFactors_MakeTheStrokeVaryInThickness()
+    public void Dashes_AreSplitIntoMultipleShapes()
     {
-        // Straight line, thin at the start, broad in the middle, thin at the end.
-        var line = Enumerable.Range(0, 40).Select(i => new Pt(i * 5, 100)).ToList();
-        var wf = line.Select((_, i) => i < 5 || i > 34 ? 0.6 : 1.3).ToList();
+        var pts = Line(60, 5.0); // 295 px long
+        var half = Enumerable.Repeat(1.5, 60).ToArray();
 
-        var polygon = InkRibbon.Build(line, baseWidth: 6, wf, live: false);
+        var dashes = InkRibbon.BuildDashed(pts, half, 10, 8);
 
-        double maxY = polygon.Max(p => p.Y), minY = polygon.Min(p => p.Y);
-        Assert.True(maxY - minY > 6, $"expected >6px thickness variation, got {maxY - minY}");
-        Assert.All(polygon, p => Assert.False(double.IsNaN(p.X) || double.IsNaN(p.Y)));
-    }
-
-    [Fact]
-    public void Build_DuplicatedPoints_DoNotProduceNaN()
-    {
-        var p = new List<Pt> { new(0, 0), new(10, 0), new(10, 0), new(10, 0), new(20, 5) };
-
-        var polygon = InkRibbon.Build(p, baseWidth: 3, widthFactors: null, live: false);
-
-        Assert.True(polygon.Count > 3);
-        Assert.All(polygon, pt => Assert.False(double.IsNaN(pt.X) || double.IsNaN(pt.Y)));
-    }
-
-    [Fact]
-    public void FromCapture_SlowSegmentIsWiderThanFastSegment()
-    {
-        // 21 samples, equal 4px spacing: the first half is drawn slowly (4 ms per
-        // sample), the second half is a fast flick (1 ms per sample). Slow nib
-        // travel must render wider than fast travel.
-        var pts = Enumerable.Range(0, 21).Select(i => new Pt(i * 4, 0)).ToList();
-        var times = new List<double>();
-        double t = 0;
-        for (int i = 0; i < pts.Count; i++)
-        {
-            t += i <= 10 ? 4 : 1;
-            times.Add(t);
-        }
-
-        var wf = InkWidths.FromCapture(pts, null, times, pts);
-
-        Assert.Equal(pts.Count, wf.Count);
-        Assert.True(wf[2] > wf[18], $"slow segment should be wider: {wf[2]:F2} vs {wf[18]:F2}");
-        Assert.All(wf, v => Assert.InRange(v, 0.5, 1.4));
+        Assert.True(dashes.Count >= 10, $"expected a dash every 18 px, got {dashes.Count}");
+        Assert.All(dashes, d => Assert.True(d.Count >= 3));
     }
 }

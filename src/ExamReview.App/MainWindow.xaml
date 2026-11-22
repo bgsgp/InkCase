@@ -223,6 +223,19 @@
                         <ToggleButton x:Name="InkToggle" Content="批注" Style="{StaticResource ToolToggle}"
                                       Checked="InkToggle_Changed" Unchecked="InkToggle_Changed"
                                       ToolTip="打开后在文章上自由手写，笔迹随试卷保存" />
+                        <!-- Six pens ported from xnotes; each one shapes the ribbon differently. -->
+                        <ToggleButton x:Name="InkStylePen" Content="钢笔" Tag="pen" Style="{StaticResource ToolToggle}"
+                                      Click="InkStyle_Click" ToolTip="标准钢笔：压感决定粗细" />
+                        <ToggleButton x:Name="InkStyleDashed" Content="虚线" Tag="dashed" Style="{StaticResource ToolToggle}"
+                                      Click="InkStyle_Click" ToolTip="等宽虚线，用来划线、圈范围" />
+                        <ToggleButton x:Name="InkStyleCalligraphy" Content="书法" Tag="calligraphy" Style="{StaticResource ToolToggle}"
+                                      Click="InkStyle_Click" ToolTip="斜切笔尖：横细竖粗" />
+                        <ToggleButton x:Name="InkStyleSpeed" Content="速度" Tag="speed" Style="{StaticResource ToolToggle}"
+                                      Click="InkStyle_Click" ToolTip="写得快就细、写得慢就粗" />
+                        <ToggleButton x:Name="InkStyleTaper" Content="收锋" Tag="taper" Style="{StaticResource ToolToggle}"
+                                      Click="InkStyle_Click" ToolTip="起笔饱满、收笔渐细" />
+                        <ToggleButton x:Name="InkStyleHighlighter" Content="荧光" Tag="highlighter" Style="{StaticResource ToolToggle}"
+                                      Click="InkStyle_Click" ToolTip="半透明荧光笔，适合大字横扫" />
                         <Button Content="撤销一笔" Style="{StaticResource ToolButton}" Click="UndoInk_Click" />
                         <Button Content="清除本节" Style="{StaticResource ToolButton}" Click="ClearInk_Click" />
                         <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />

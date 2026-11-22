@@ -13,9 +13,10 @@ namespace ExamReview.App.Controls;
 /// <see cref="FrameworkElement"/> that draws every finished stroke as a filled
 /// ribbon polygon in <see cref="OnRender"/> — no per-stroke Path elements.
 ///
-/// The nib model follows xnotes: each point carries a width factor derived from
-/// pen pressure and speed, and the outline is the swept disk boundary, so live
-/// preview uses exactly the same geometry as the committed stroke.
+/// The nib model is xnotes': <see cref="InkStyle"/> picks one of six tools, and
+/// <see cref="InkEngine"/> derives the per-point half-width (pressure, nib
+/// direction, speed or taper depending on the tool). Live preview runs the very
+/// same engine, so what is drawn while the pen is down is what gets committed.
 /// </summary>
 public sealed class InkCanvasElement : FrameworkElement
 {
@@ -24,8 +25,9 @@ public sealed class InkCanvasElement : FrameworkElement
     private readonly List<double> _livePressure = [];
     private readonly List<double> _liveTime = [];
     private readonly Stopwatch _clock = Stopwatch.StartNew();
-    private List<Pt>? _livePolygon;
+    private List<IReadOnlyList<Pt>> _livePolygons = [];
     private bool _inkEnabled = true;
+    private InkStyle _style = InkStyle.For(InkTool.Pen);
 
     public InkCanvasElement()
     {
@@ -36,7 +38,22 @@ public sealed class InkCanvasElement : FrameworkElement
 
     public Color InkColor { get; set; } = Color.FromRgb(0xD3, 0x3A, 0x2C);
 
-    public double BaseWidth { get; set; } = 3.0;
+    /// <summary>The active pen (tool + width + pressure model).</summary>
+    public InkStyle Pen
+    {
+        get => _style;
+        set
+        {
+            _style = value ?? InkStyle.For(InkTool.Pen);
+            InvalidateVisual();
+        }
+    }
+
+    public double BaseWidth
+    {
+        get => _style.BaseWidth;
+        set => _style = _style with { BaseWidth = value };
+    }
 
     public string? SectionId { get; set; }
 
@@ -81,31 +98,58 @@ public sealed class InkCanvasElement : FrameworkElement
         foreach (var stroke in _strokes)
             DrawStroke(dc, stroke);
 
-        if (_livePolygon is { Count: > 2 })
-            dc.DrawGeometry(new SolidColorBrush(InkColor), null, ToGeometry(_livePolygon));
+        if (_livePolygons.Count == 0) return;
+
+        var liveBrush = new SolidColorBrush(InkColor);
+        liveBrush.Freeze();
+        dc.PushOpacity(_style.AlphaScale);
+        foreach (var polygon in _livePolygons)
+            dc.DrawGeometry(liveBrush, null, ToGeometry(polygon));
+        dc.Pop();
     }
 
     private void DrawStroke(DrawingContext dc, InkStroke stroke)
     {
         var width = ActualWidth;
         var height = ActualHeight;
-        if (width <= 1 || height <= 1 || stroke.Points.Count < 2) return;
+        if (width <= 1 || height <= 1 || stroke.Points.Count == 0) return;
 
-        var points = stroke.Points.Select(p => new Pt(p.X, p.Y)).ToList();
-        var wf = stroke.WidthFactors is { Count: > 0 } list ? list.ToList() : null;
-
-        var polygon = RibbonBuilder.BuildPolygonPx(
-            points.Select(p => new Pt(p.X * width, p.Y * height)).ToList(), stroke.BaseWidth, live: false, wf);
-        if (polygon.Count < 3) return;
+        var style = InkStyle.For(stroke.Tool, stroke.BaseWidth);
+        var center = new Pt[stroke.Points.Count];
+        var halfWidth = new double[stroke.Points.Count];
+        for (int i = 0; i < center.Length; i++)
+        {
+            center[i] = new Pt(stroke.Points[i].X * width, stroke.Points[i].Y * height);
+            double factor = stroke.WidthFactors is { } factors && i < factors.Count && factors[i] > 0 ? factors[i] : 1.0;
+            halfWidth[i] = Math.Max(0.2, stroke.BaseWidth * 0.5 * factor);
+        }
 
         var brush = new SolidColorBrush(ParseColor(stroke.Color));
         brush.Freeze();
-        dc.DrawGeometry(brush, null, ToGeometry(polygon));
+
+        // xnotes fades the highlighter in its paint pass; with source-over only,
+        // element opacity is the honest equivalent (strokes never overlap themselves).
+        dc.PushOpacity(style.AlphaScale);
+
+        if (style.Tool == InkTool.Dashed)
+        {
+            foreach (var polygon in InkRibbon.BuildDashed(center, halfWidth, style.DashLength, style.DashGap))
+                if (polygon.Count >= 3)
+                    dc.DrawGeometry(brush, null, ToGeometry(polygon));
+        }
+        else
+        {
+            var polygon = InkRibbon.Build(center, halfWidth);
+            if (polygon.Count >= 3)
+                dc.DrawGeometry(brush, null, ToGeometry(polygon));
+        }
+
+        dc.Pop();
     }
 
     private static StreamGeometry ToGeometry(IReadOnlyList<Pt> polygon)
     {
-        var geometry = new StreamGeometry();
+        var geometry = new StreamGeometry { FillRule = FillRule.Nonzero };
         using (var ctx = geometry.Open())
         {
             ctx.BeginFigure(new Point(polygon[0].X, polygon[0].Y), true, true);
@@ -194,7 +238,6 @@ public sealed class InkCanvasElement : FrameworkElement
     {
         ResetLive();
         AppendStylusPoints(points);
-        RefreshPreview();
     }
 
     private void AppendStylusPoints(StylusPointCollection points)
@@ -220,14 +263,22 @@ public sealed class InkCanvasElement : FrameworkElement
 
     private void RefreshPreview()
     {
-        if (_livePx.Count < 2)
+        _livePolygons = [];
+        if (_livePx.Count >= 2)
         {
-            _livePolygon = null;
-        }
-        else
-        {
-            var wf = InkWidths.FromCapture(_livePx, _livePressure, _liveTime, _livePx, live: true);
-            _livePolygon = InkRibbon.Build(_livePx, BaseWidth, wf, live: true);
+            var geometry = InkEngine.Build(_livePx, _livePressure, _liveTime, _style, finished: false);
+            var center = new List<Pt>(geometry.Count);
+            var halfWidth = new double[geometry.Count];
+            for (int i = 0; i < geometry.Count; i++)
+            {
+                center.Add(new Pt(geometry.X[i], geometry.Y[i]));
+                halfWidth[i] = geometry.HalfWidth[i];
+            }
+
+            if (_style.Tool == InkTool.Dashed)
+                _livePolygons.AddRange(InkRibbon.BuildDashed(center, halfWidth, _style.DashLength, _style.DashGap));
+            else
+                _livePolygons.Add(InkRibbon.Build(center, halfWidth));
         }
 
         InvalidateVisual();
@@ -237,9 +288,9 @@ public sealed class InkCanvasElement : FrameworkElement
     {
         var width = ActualWidth;
         var height = ActualHeight;
-        _livePolygon = null;
+        bool hadPoints = _livePx.Count >= 2;
 
-        if (_livePx.Count < 2 || width <= 1 || height <= 1)
+        if (!hadPoints || width <= 1 || height <= 1)
         {
             ResetLive();
             InvalidateVisual();
@@ -249,15 +300,15 @@ public sealed class InkCanvasElement : FrameworkElement
         var colorHex = $"#{(int)InkColor.R:X2}{(int)InkColor.G:X2}{(int)InkColor.B:X2}";
         var raw = new RawStroke(
             colorHex,
-            BaseWidth,
+            _style.BaseWidth,
             _livePx.Select(p => new Pt(p.X / width, p.Y / height)).ToList(),
             _livePressure.ToList(),
             _liveTime.ToList());
 
-        var beautified = StrokeBeautifier.Beautify(raw, width, height);
+        var built = InkBuilder.Build(raw, _style, width, height);
         ResetLive();
 
-        if (beautified is null)
+        if (built is null)
         {
             InvalidateVisual();
             return;
@@ -267,10 +318,11 @@ public sealed class InkCanvasElement : FrameworkElement
         {
             Id = $"stroke-{Guid.NewGuid():N}",
             Anchor = new InkAnchor { SectionId = SectionId },
-            Color = colorHex,
-            BaseWidth = BaseWidth,
-            Points = beautified.FractionalPoints.Select(p => new InkPoint(p.X, p.Y)).ToList(),
-            WidthFactors = beautified.WidthFactors.ToList(),
+            Color = built.Color,
+            Tool = built.ToolId,
+            BaseWidth = built.BaseWidth,
+            Points = built.FractionalPoints.Select(p => new InkPoint(p.X, p.Y)).ToList(),
+            WidthFactors = built.WidthFactors.ToList(),
         };
 
         _strokes.Add(stroke);
@@ -283,7 +335,7 @@ public sealed class InkCanvasElement : FrameworkElement
         _livePx.Clear();
         _livePressure.Clear();
         _liveTime.Clear();
-        _livePolygon = null;
+        _livePolygons = [];
     }
 
     private static Color ParseColor(string hex)
