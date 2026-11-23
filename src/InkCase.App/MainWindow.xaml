@@ -250,6 +250,9 @@
 
                         <TextBlock x:Name="StatusText" Text="就绪" Foreground="{StaticResource Muted}" FontSize="12"
                                    VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="VersionText" Foreground="{StaticResource Muted}" FontSize="11" Opacity="0.8"
+                                   VerticalAlignment="Center" Margin="10,0,0,0"
+                                   ToolTip="版本号 = 大版本.小版本.本小版本提交数.总提交数" />
                     </WrapPanel>
                 </Border>
             </StackPanel>

@@ -42,8 +42,8 @@ InkCase.slnx
 │   ├── Lmm.Plugins.English/       → Lmm.Plugins.Abstractions, Lmm.Core
 │   │     英语学科模块（题型处理器、试卷校验）
 │   ├── Lmm.Import/                → Lmm.Core
-│   │     纯文本/粘贴文本 → 试卷结构化解析（已实现）
-│   │     PDF / OCR / DOCX 导入（未实现）
+│   │     .txt/.md/.docx/.doc → 试卷结构化解析（已实现）
+│   │     PDF / OCR 导入（未实现）
 │   ├── Lmm.Translation/           → Lmm.Core
 │   │     ITranslationProvider + MyMemory 实现
 │   └── InkCase.App/            (net10.0-windows, WPF) → 以上全部
@@ -216,9 +216,12 @@ python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./
       显示全部答案｜A−/A+ 字号）、空态引导、拖放打开、Ctrl+O/S/I
 - [x] 空壳原则：程序本身**不内置任何试卷**，启动就是空态；内容全部来自
       `.lmm` 文件或导入。命令行参数可挂文件关联（`InkCase.exe x.lmm`）
-- [x] 导入（`Lmm.Import.PaperTextImporter`）：纯文本/粘贴文本 → 试卷
-      （文章分段、题号/选项/答案/解析识别），解析不到答案时占位并在
-      `Notes` 里明说，不静默造假
+- [x] 导入（`Lmm.Import`）：`.txt/.md/.docx/.doc` → 试卷（文章分段、
+      题号/选项/答案/解析识别），解析不到答案时占位并在 `Notes` 里明说，
+      不静默造假。`.docx` 用 `System.IO.Compression` 直接读
+      `word/document.xml` 的 `w:p`/`w:br`/`w:tab`（不引第三方库）；旧版
+      `.doc` 借本机 Word 走 COM 转临时 `.docx` 再读，转不了就给可操作的
+      提示（另存为 .docx），不崩
 - [x] 翻译（`Lmm.Translation`）：`ITranslationProvider` + MyMemory 实现
       （长段按句分块、配额告警转成可读错误），主窗口"翻译本节"按钮接好
 - [x] 校验：保存前逐节 `Validate`，error 阻断并列出；缺模块时明确报错
@@ -226,8 +229,8 @@ python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./
       不留日志的话异常会静默消失）
 
 **未完成（按原计划的下一步顺序）：**
-- [ ] Phase 3：PDF/OCR/DOCX 导入管线（`Lmm.Import`，选型见下表；
-      目前只有纯文本导入）
+- [ ] Phase 3：PDF / OCR 导入管线（`Lmm.Import`，选型见下表；文本与
+      Word 导入已完成）
 - [ ] Phase 2b 收尾：橡皮、多笔并存的手感细节，真机用绘图板试写后调参
       （当前只有笔，无橡皮；撤销是"撤销本节最后一笔"）
 - [ ] Phase 5：导出（PDF/打印）、试卷库抽屉（文件夹 + 可重建的 SQLite 检索
@@ -235,6 +238,24 @@ python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./
 - [ ] Phase 6：`ManualModuleCatalog` → `AssemblyScanningModuleCatalog`，
       并实现第二个学科模块验证插件契约
 - [ ] 试卷修正面板（参考 HTML 里能改题号/名字的那个 fixBox）未移植
+
+## 版本号：大版本.小版本.本小版本提交数.总提交数
+
+版本号不是手写的，由 `Directory.Build.props` 在编译时用 git 算出来：
+
+- 大版本 / 小版本：`<InkCaseMajor>` / `<InkCaseMinor>` 两个属性（当前 `0.1`）。
+  发一个小版本时打 tag（如 `v0.2`），下一个版本就从那个 tag 开始数。
+- 本小版本提交数：`git rev-list --count <最近 tag>..HEAD`；没有 tag 时退化为总提交数。
+- 总提交数：`git rev-list --count HEAD`。
+
+目标 `InkCaseGitVersion` 只对 `InkCase.App` 跑（在
+`GenerateAssemblyInfo;GetAssemblyVersion` 之前），把结果写进
+`Version`/`FileVersion`/`InformationalVersion`，编译日志会打一行
+「墨案 版本号 0.1.9.9」。主窗口工具栏右侧显示 `v<版本>`（读
+`AssemblyInformationalVersion`，截掉 SourceLink 追加的 `+sha`）。
+
+这样提交即变版本，不需要人记得改 csproj；代价是**源码目录不是 git 仓库时
+版本停在 `x.y.0.0`**（git 命令失败就回退默认值，不会编译失败）。
 
 ## 第三方库选型（尚未落到 csproj 里，供后续参考）
 
@@ -255,9 +276,9 @@ README 上面说的"到有正常网络的开发机上第一件事是 `dotnet tes
 Windows 机器上做过：
 
 - `dotnet build InkCase.slnx -c Release` —— 0 警告 0 错误（.NET SDK 11.0.100）。
-- `dotnet test InkCase.slnx -c Release` —— **44/44 全绿**
-  （Lmm.Core.Tests 19、Lmm.Format.Tests 2、Lmm.Plugins.English.Tests 8、
-  Lmm.Import.Tests 5）。
+- `dotnet test InkCase.slnx -c Release` —— **49/49 全绿**
+  （Lmm.Core.Tests 29、Lmm.Format.Tests 2、Lmm.Plugins.English.Tests 8、
+  Lmm.Import.Tests 10）。
 - 首次跑测试挂了 1 个：`InkGeometryTests.ResamplePts_ProducesApproximatelyEqualSpacing`
   实测间距 1.17（期望 3.5–4.5）。原因是 `InkGeometry.ResamplePts` 的记账 bug：
   它用"上一个输出点到 `p[i]` 的弦长"来累计已走弧长，而这条弦会跨过已经

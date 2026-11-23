@@ -1,0 +1,56 @@
+<Project>
+
+  <!--
+    版本号方案（用户约定）：大版本.小版本.本小版本提交数.总提交数
+    例：0.1.9.9 = 大版本 0、小版本 1、这一小版里第 9 个提交、仓库第 9 个提交。
+
+    大版本 / 小版本在这里手动改（发新小版本时先打 tag，比如 v0.2，
+    后两段就会从 tag 之后重新数）。后两段由 git 现算，所以发布出来的
+    exe 的版本号永远和当时的提交历史对得上，不需要手动同步。
+    在没有 git 或者源码是解压包的情况下，回退到 0.1.0.0。
+  -->
+  <PropertyGroup>
+    <InkCaseMajor>0</InkCaseMajor>
+    <InkCaseMinor>1</InkCaseMinor>
+    <Version>$(InkCaseMajor).$(InkCaseMinor).0.0</Version>
+  </PropertyGroup>
+
+  <!-- 只有应用本体需要把版本号打进程序集；其它类库用上面的回退值即可。 -->
+  <Target Name="InkCaseGitVersion" BeforeTargets="GenerateAssemblyInfo;GetAssemblyVersion"
+          Condition="'$(MSBuildProjectName)' == 'InkCase.App'">
+
+    <Exec Command="git rev-list --count HEAD"
+          ConsoleToMSBuild="true" EchoOff="true" IgnoreExitCode="true"
+          StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="InkCaseTotalRaw" />
+      <Output TaskParameter="ExitCode" PropertyName="InkCaseTotalExit" />
+    </Exec>
+
+    <Exec Command="git describe --tags --abbrev=0"
+          ConsoleToMSBuild="true" EchoOff="true" IgnoreExitCode="true"
+          StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="InkCaseTagRaw" />
+      <Output TaskParameter="ExitCode" PropertyName="InkCaseTagExit" />
+    </Exec>
+
+    <Exec Command="git rev-list --count $(InkCaseTagRaw.Trim())..HEAD"
+          ConsoleToMSBuild="true" EchoOff="true" IgnoreExitCode="true"
+          StandardOutputImportance="low" StandardErrorImportance="low"
+          Condition="'$(InkCaseTagExit)' == '0'">
+      <Output TaskParameter="ConsoleOutput" PropertyName="InkCasePatchRaw" />
+      <Output TaskParameter="ExitCode" PropertyName="InkCasePatchExit" />
+    </Exec>
+
+    <PropertyGroup Condition="'$(InkCaseTotalExit)' == '0'">
+      <InkCaseTotalCommits>$(InkCaseTotalRaw.Trim())</InkCaseTotalCommits>
+      <InkCasePatchCommits Condition="'$(InkCasePatchExit)' == '0'">$(InkCasePatchRaw.Trim())</InkCasePatchCommits>
+      <InkCasePatchCommits Condition="'$(InkCasePatchCommits)' == ''">$(InkCaseTotalCommits)</InkCasePatchCommits>
+      <Version>$(InkCaseMajor).$(InkCaseMinor).$(InkCasePatchCommits).$(InkCaseTotalCommits)</Version>
+      <FileVersion>$(Version)</FileVersion>
+      <InformationalVersion>$(Version)</InformationalVersion>
+    </PropertyGroup>
+
+    <Message Importance="high" Text="墨案 版本号 $(Version)（大版本.小版本.本小版本提交数.总提交数）" />
+  </Target>
+
+</Project>

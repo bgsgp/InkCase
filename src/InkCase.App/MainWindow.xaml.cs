@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Reflection;
 using System.IO;
 using System.Net.Http;
 using System.Windows;
@@ -34,6 +35,19 @@ public partial class MainWindow : Window
     private static readonly Brush MutedBrush = Frozen(Color.FromRgb(0x64, 0x6A, 0x72));
     private static readonly Brush InkBrush = Frozen(Color.FromRgb(0x1B, 0x1E, 0x23));
 
+    /// <summary>版本号来自 Directory.Build.props（大版本.小版本.本小版本提交数.总提交数）。</summary>
+    private static string AppVersion()
+    {
+        var assembly = typeof(MainWindow).Assembly;
+        var info = assembly.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                   ?? assembly.GetName().Version?.ToString()
+                   ?? "0.0.0.0";
+
+        // SourceLink 会在 informational version 后面追加 "+<sha>"，界面里不要。
+        var plus = info.IndexOf('+');
+        return plus >= 0 ? info[..plus] : info;
+    }
+
     private readonly IModuleCatalog _catalog;
     private readonly LmmPackageReader _reader;
     private readonly LmmPackageWriter _writer;
@@ -60,6 +74,7 @@ public partial class MainWindow : Window
         _translator = translator;
         InitializeComponent();
         SetInkTool(InkTool.Pen);
+        VersionText.Text = "v" + AppVersion();
 
         // The default 1440x920 doesn't fit every screen (e.g. a 1280x720 panel at
         // 150% scaling reports ~850x460 DIPs). Clamp to the work area so no window
@@ -191,8 +206,8 @@ public partial class MainWindow : Window
 
         var dialog = new OpenFileDialog
         {
-            Title = "从文本导入试卷",
-            Filter = "试卷文本 (*.txt;*.md)|*.txt;*.md|所有文件 (*.*)|*.*",
+            Title = "导入试卷",
+            Filter = "试卷文件 (*.txt;*.md;*.docx;*.doc)|*.txt;*.md;*.docx;*.doc|所有文件 (*.*)|*.*",
         };
         if (dialog.ShowDialog(this) != true) return;
         ImportPath(dialog.FileName);
@@ -208,6 +223,11 @@ public partial class MainWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             MessageBox.Show(this, ex.Message, "无法读取文件", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+        catch (ImportFormatException ex)
+        {
+            MessageBox.Show(this, ex.Message, "无法导入", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -328,8 +348,7 @@ public partial class MainWindow : Window
     public void OpenExternal(string path)
     {
         if (path.EndsWith(".lmm", StringComparison.OrdinalIgnoreCase)) OpenPath(path);
-        else if (path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
-                 path.EndsWith(".md", StringComparison.OrdinalIgnoreCase)) ImportPath(path);
+        else if (PaperTextImporter.IsImportable(path)) ImportPath(path);
         else UpdateStatus($"不支持的文件类型：{Path.GetFileName(path)}");
     }
 
@@ -349,8 +368,7 @@ public partial class MainWindow : Window
 
         var file = files[0];
         if (file.EndsWith(".lmm", StringComparison.OrdinalIgnoreCase)) OpenPath(file);
-        else if (file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
-                 file.EndsWith(".md", StringComparison.OrdinalIgnoreCase)) ImportPath(file);
+        else if (PaperTextImporter.IsImportable(file)) ImportPath(file);
         else UpdateStatus($"不支持的文件类型：{Path.GetFileName(file)}");
     }
 

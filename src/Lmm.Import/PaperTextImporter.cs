@@ -89,9 +89,15 @@ public static partial class PaperTextImporter
         return new ImportResult { Paper = paper, Notes = notes };
     }
 
+    /// <summary>墨案能直接导入的扩展名（给文件对话框和拖放用，别在界面里重复写一遍）。</summary>
+    public static readonly string[] ImportableExtensions = [".txt", ".md", ".markdown", ".docx", ".doc"];
+
+    public static bool IsImportable(string path) =>
+        ImportableExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+
     public static ImportResult ParseFile(string path, string? title = null)
     {
-        var text = File.ReadAllText(path);
+        var text = DocumentTextExtractor.Extract(path);
         return Parse(text, title ?? Path.GetFileNameWithoutExtension(path));
     }
 
