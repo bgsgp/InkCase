@@ -488,7 +488,8 @@ public partial class MainWindow : Window
             var position = 0;
             foreach (var span in paragraph.Spans.OrderBy(s => s.Start))
             {
-                if (span.Start < position || span.Start + span.Length > paragraph.Text.Length) continue;
+                if (span.Start < position || span.Length <= 0 ||
+                    (long)span.Start + span.Length > paragraph.Text.Length) continue;
                 if (span.Start > position)
                     block.Inlines.Add(new Run(paragraph.Text[position..span.Start]));
 

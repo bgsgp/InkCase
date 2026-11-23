@@ -99,6 +99,22 @@ public class EnglishModuleTests
         Assert.Contains(result.Issues, i => i.Message.Contains("越界"));
     }
 
+    [Theory]
+    [InlineData(int.MaxValue)]
+    [InlineData(-1)]
+    public void Validate_FlagsOverflowingAndNegativeSpanLengths(int length)
+    {
+        var section = EnglishSamplePaper.Create().Sections[0];
+        var span = section.Article!.Paragraphs[0].Spans[0];
+        span.Start = 1;
+        span.Length = length;
+
+        var result = _module.Validate(section);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Issues, i => i.Message.Contains("越界"));
+    }
+
     [Fact]
     public void Validate_RequiresArticle_ForReadingSection()
     {

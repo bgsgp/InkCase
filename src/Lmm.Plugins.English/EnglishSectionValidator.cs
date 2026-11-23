@@ -58,7 +58,7 @@ public static class EnglishSectionValidator
             for (int s = 0; s < paragraph.Spans.Count; s++)
             {
                 var span = paragraph.Spans[s];
-                var tooLong = span.Start < 0 || span.Length <= 0 || span.Start + span.Length > paragraph.Text.Length;
+                var tooLong = span.Start < 0 || span.Length <= 0 || (long)span.Start + span.Length > paragraph.Text.Length;
                 if (tooLong)
                     issues.Add(new ValidationIssue(ValidationSeverity.Error,
                         $"高亮/挖空区间越界（start={span.Start}, length={span.Length}, 段落长度={paragraph.Text.Length}）。",

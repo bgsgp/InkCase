@@ -76,4 +76,14 @@ public class PaperTextImporterTests
         var result = PaperTextImporter.Parse("line one\nline two\n\nnext para", "p");
         Assert.Equal("line one line two", result.Paper.Sections[0].Article!.Paragraphs[0].Text);
     }
+
+    [Fact]
+    public void Parse_WrappedQuestionLinesPreserveSingleSpaces()
+    {
+        var result = PaperTextImporter.Parse("1. first line\nsecond line\nthird line\nA. one  B. two", "t");
+        var question = result.Paper.Sections[0].Questions[0];
+
+        Assert.Equal("first line second line third line", question.Stem);
+        Assert.Equal(["one", "two"], question.Options.Select(o => o.Text));
+    }
 }

@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using Lmm.Core.Model;
 
@@ -126,13 +127,13 @@ public static partial class PaperTextImporter
     private static List<Question> ParseQuestions(IReadOnlyList<string> lines, List<string> notes)
     {
         var questions = new List<Question>();
-        string? current = null;
+        StringBuilder? current = null;
         int number = 0;
 
         void Flush()
         {
             if (current is null) return;
-            questions.Add(BuildQuestion(number, current, notes));
+            questions.Add(BuildQuestion(number, current.ToString(), notes));
             current = null;
         }
 
@@ -146,11 +147,11 @@ public static partial class PaperTextImporter
             {
                 Flush();
                 number = int.Parse(match.Groups[1].Value);
-                current = match.Groups[2].Value.Trim();
+                current = new StringBuilder(match.Groups[2].Value.Trim());
             }
             else if (current is not null)
             {
-                current += " " + line;
+                current.Append(' ').Append(line);
             }
         }
 
