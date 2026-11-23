@@ -29,11 +29,17 @@ namespace InkCase.App;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private static readonly Brush EvidenceBrush = Frozen(Color.FromRgb(0xFF, 0xF1, 0xB8));
-    private static readonly Brush EvidenceBrushStrong = Frozen(Color.FromRgb(0xFF, 0xD5, 0x5A));
-    private static readonly Brush CorrectBrush = Frozen(Color.FromRgb(0x1B, 0x7F, 0x3B));
-    private static readonly Brush MutedBrush = Frozen(Color.FromRgb(0x64, 0x6A, 0x72));
-    private static readonly Brush InkBrush = Frozen(Color.FromRgb(0x1B, 0x1E, 0x23));
+    // Brush lookups, not frozen fields: the palette is swapped at runtime by
+    // ThemeManager, and code-built TextBlocks must follow the new theme the
+    // next time the section is rendered (see OnThemeChanged).
+    private static Brush Res(string key) =>
+        Application.Current?.TryFindResource(key) as Brush ?? Brushes.Black;
+
+    private static Brush EvidenceBrush => Res(ThemeManager.KeyEvidence);
+    private static Brush EvidenceBrushStrong => Res(ThemeManager.KeyEvidenceStrong);
+    private static Brush CorrectBrush => Res(ThemeManager.KeyCorrect);
+    private static Brush MutedBrush => Res(ThemeManager.KeyMuted);
+    private static Brush InkBrush => Res(ThemeManager.KeyInk);
 
     /// <summary>版本号来自 Directory.Build.props（大版本.小版本.本小版本提交数.总提交数）。</summary>
     private static string AppVersion()
@@ -63,6 +69,9 @@ public partial class MainWindow : Window
     private string? _path;
     private bool _dirty;
     private int _selectedQuestionNumber;
+
+    /// <summary>Which ink layer the toolbar's undo/clear acts on: "article" or "answer".</summary>
+    private string _activeSurface = InkSurfaces.Article;
     private double _zoom = 1.0;
     private bool _revealAll;
 
@@ -79,6 +88,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         SetInkTool(InkTool.Pen);
         VersionText.Text = "v" + AppVersion();
+        UpdateThemeLabel();
+        ThemeManager.Changed += (_, _) => OnThemeChanged();
 
         // The default 1440x920 doesn't fit every screen (e.g. a 1280x720 panel at
         // 150% scaling reports ~850x460 DIPs). Clamp to the work area so no window
@@ -96,11 +107,29 @@ public partial class MainWindow : Window
         ShowEmpty();
     }
 
-    private static Brush Frozen(Color color)
+    // ---------- theme ----------
+
+    private void Theme_Click(object sender, RoutedEventArgs e)
     {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        return brush;
+        ThemeManager.SetMode(ThemeManager.NextMode(ThemeManager.Mode));
+        UpdateThemeLabel();
+        UpdateStatus($"外观：{ThemeManager.ModeLabel(ThemeManager.Mode)}" +
+                     (ThemeManager.Mode == AppTheme.Auto ? "（跟随 Windows）" : ""));
+    }
+
+    private void UpdateThemeLabel() =>
+        ThemeBtn.Content = $"外观：{ThemeManager.ModeLabel(ThemeManager.Mode)}";
+
+    /// <summary>
+    /// The XAML follows the palette by itself (DynamicResource); only the
+    /// code-built runs — article runs, question cards, detail panel — hold
+    /// brushes resolved at build time, so re-render the current section.
+    /// </summary>
+    private void OnThemeChanged()
+    {
+        UpdateThemeLabel();
+        if (_section is null) return;
+        RenderSection();
     }
 
     // ---------- window chrome ----------
@@ -407,6 +436,7 @@ public partial class MainWindow : Window
         BilingualPanel.Children.Clear();
         DrillPanel.Children.Clear();
         InkCanvas.SetStrokes([]);
+        AnswerInkCanvas.SetStrokes([]);
     }
 
     private void RenderSection()
@@ -488,6 +518,7 @@ public partial class MainWindow : Window
         _selectedQuestionNumber = entry.Question.Number;
         RenderArticle();
         RenderDetail(entry.Question);
+        RenderInk();
         UpdateStatus();
     }
 
@@ -567,7 +598,7 @@ public partial class MainWindow : Window
         FontSize = 13,
         LineHeight = 21,
         Margin = new Thickness(0, 10, 0, 0),
-        Foreground = foreground ?? Frozen(Color.FromRgb(0x44, 0x44, 0x44)),
+        Foreground = foreground ?? Res(ThemeManager.KeyInk),
     };
 
     private void RenderStructure()
@@ -585,7 +616,7 @@ public partial class MainWindow : Window
         {
             var block = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12), FontSize = 13.5, LineHeight = 22 };
             block.Inlines.Add(new Run(row.ParaLabel + "  ") { FontWeight = FontWeights.Bold, Foreground = InkBrush });
-            block.Inlines.Add(new Run(row.Function + "  ") { Foreground = Frozen(Color.FromRgb(0x0D, 0x5A, 0x53)) });
+            block.Inlines.Add(new Run(row.Function + "  ") { Foreground = Res(ThemeManager.KeyBrand) });
             block.Inlines.Add(new Run(row.ContentNote) { Foreground = InkBrush });
             if (row.QuestionRefs.Count > 0)
                 block.Inlines.Add(new Run($"  → 第 {string.Join("、", row.QuestionRefs)} 题") { Foreground = MutedBrush });
@@ -725,23 +756,44 @@ public partial class MainWindow : Window
 
     // ---------- ink ----------
 
+    /// <summary>
+    /// Both ink layers belong to the current section. The article layer is shared
+    /// by the whole section; the answer layer is per question, so switching the
+    /// selected question swaps which strokes are visible there.
+    /// </summary>
     private void RenderInk()
     {
+        var on = InkToggle.IsChecked == true;
+
         InkCanvas.SectionId = _section?.Id;
-        var strokes = _paper is null
-            ? []
-            : _paper.InkStrokes.Where(s => string.Equals(s.Anchor.SectionId, _section?.Id, StringComparison.Ordinal));
-        InkCanvas.SetStrokes(strokes);
-        InkCanvas.Visibility = InkToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        InkCanvas.InkEnabled = InkToggle.IsChecked == true;
+        InkCanvas.Surface = InkSurfaces.Article;
+        InkCanvas.QuestionNumber = null;
+        InkCanvas.SetStrokes(_paper is null ? [] : StrokesFor(InkSurfaces.Article));
+        InkCanvas.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        InkCanvas.InkEnabled = on;
+
+        AnswerInkCanvas.SectionId = _section?.Id;
+        AnswerInkCanvas.Surface = InkSurfaces.Answer;
+        AnswerInkCanvas.QuestionNumber = _selectedQuestionNumber > 0 ? _selectedQuestionNumber : null;
+        AnswerInkCanvas.SetStrokes(_paper is null ? [] : StrokesFor(InkSurfaces.Answer));
+        AnswerInkCanvas.Visibility = on && _selectedQuestionNumber > 0 ? Visibility.Visible : Visibility.Collapsed;
+        AnswerInkCanvas.InkEnabled = on;
     }
+
+    private IEnumerable<InkStroke> StrokesFor(string surface) =>
+        _paper is null || _section is null
+            ? []
+            : _paper.InkStrokes.Where(s =>
+                string.Equals(s.Anchor.SectionId, _section.Id, StringComparison.Ordinal)
+                && string.Equals(s.Anchor.Surface ?? InkSurfaces.Article, surface, StringComparison.Ordinal)
+                && (surface != InkSurfaces.Answer
+                    ? s.Anchor.QuestionNumber is null
+                    : s.Anchor.QuestionNumber == _selectedQuestionNumber));
 
     private void InkToggle_Changed(object sender, RoutedEventArgs e)
     {
         if (InkCanvas is null) return;
-        var on = InkToggle.IsChecked == true;
-        InkCanvas.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        InkCanvas.InkEnabled = on;
+        RenderInk();
     }
 
     private void InkStyle_Click(object sender, RoutedEventArgs e)
@@ -759,9 +811,11 @@ public partial class MainWindow : Window
     {
         _tool = tool;
         ApplyPen();
-        InkCanvas.InkColor = tool == InkTool.Highlighter
+        var inkColor = tool == InkTool.Highlighter
             ? Color.FromRgb(0xE9, 0xA9, 0x3B)
             : Color.FromRgb(0xD3, 0x3A, 0x2C);
+        InkCanvas.InkColor = inkColor;
+        AnswerInkCanvas.InkColor = inkColor;
 
         var buttons = new (ToggleButton Button, InkTool Tool)[]
         {
@@ -787,6 +841,7 @@ public partial class MainWindow : Window
     {
         var style = InkStyle.For(_tool);
         InkCanvas.Pen = style with { BaseWidth = CurrentWidth() };
+        AnswerInkCanvas.Pen = style with { BaseWidth = CurrentWidth() };
         WidthText.Text = CurrentWidth().ToString("0.0");
     }
 
@@ -829,38 +884,60 @@ public partial class MainWindow : Window
 
     private void InkCanvas_StrokeFinished(object? sender, InkStroke stroke)
     {
+        _activeSurface = InkSurfaces.Article;
+        AddStroke(stroke);
+    }
+
+    private void AnswerInkCanvas_StrokeFinished(object? sender, InkStroke stroke)
+    {
+        _activeSurface = InkSurfaces.Answer;
+        AddStroke(stroke);
+    }
+
+    private void AddStroke(InkStroke stroke)
+    {
         _paper?.InkStrokes.Add(stroke);
         _dirty = true;
-        UpdateStatus("已添加一笔批注");
+        UpdateStatus(_activeSurface == InkSurfaces.Answer
+            ? $"已给第 {_selectedQuestionNumber} 题的答案区加了一笔"
+            : "已添加一笔批注");
     }
 
     private void UndoInk_Click(object sender, RoutedEventArgs e)
     {
         if (_paper is null || _section is null) return;
 
-        var last = _paper.InkStrokes.LastOrDefault(s =>
-            string.Equals(s.Anchor.SectionId, _section.Id, StringComparison.Ordinal));
+        var last = _paper.InkStrokes.LastOrDefault(s => OnActiveSurface(s));
         if (last is null)
         {
-            UpdateStatus("这一节没有可撤销的笔迹");
+            UpdateStatus(_activeSurface == InkSurfaces.Answer
+                ? "这道题的答案区没有可撤销的笔迹"
+                : "这一节没有可撤销的笔迹");
             return;
         }
 
         _paper.InkStrokes.Remove(last);
         RenderInk();
         _dirty = true;
-        UpdateStatus("已撤销一笔");
+        UpdateStatus(_activeSurface == InkSurfaces.Answer ? "已撤销答案区一笔" : "已撤销一笔");
     }
+
+    /// <summary>True when the stroke sits on the layer undo/clear currently targets.</summary>
+    private bool OnActiveSurface(InkStroke stroke) =>
+        _section is not null
+        && string.Equals(stroke.Anchor.SectionId, _section.Id, StringComparison.Ordinal)
+        && string.Equals(stroke.Anchor.Surface ?? InkSurfaces.Article, _activeSurface, StringComparison.Ordinal)
+        && (_activeSurface != InkSurfaces.Answer || stroke.Anchor.QuestionNumber == _selectedQuestionNumber);
 
     private void ClearInk_Click(object sender, RoutedEventArgs e)
     {
         if (_paper is null || _section is null) return;
 
-        var removed = _paper.InkStrokes.RemoveAll(s =>
-            string.Equals(s.Anchor.SectionId, _section.Id, StringComparison.Ordinal));
+        var removed = _paper.InkStrokes.RemoveAll(s => OnActiveSurface(s));
         RenderInk();
         if (removed > 0) _dirty = true;
-        UpdateStatus(removed > 0 ? $"已清除本节 {removed} 笔" : "这一节没有笔迹");
+        var layer = _activeSurface == InkSurfaces.Answer ? "这道题的答案区" : "本节";
+        UpdateStatus(removed > 0 ? $"已清除{layer} {removed} 笔" : $"{layer}没有笔迹");
     }
 
     // ---------- misc ----------

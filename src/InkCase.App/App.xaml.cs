@@ -26,6 +26,11 @@ public partial class App : Application
         // assemblies would be over-engineering. The shell talks to
         // IModuleCatalog, so swapping in an AssemblyLoadContext catalog later
         // doesn't touch MainWindow.
+        // Palette before the window: MainWindow.xaml resolves DynamicResource
+        // keys against Application.Resources and would otherwise use the light
+        // defaults in App.xaml.
+        ThemeManager.Initialize();
+
         var catalog = new ManualModuleCatalog([new EnglishSubjectModule()]);
         var translator = new MyMemoryTranslationProvider();
         var window = new MainWindow(catalog, new LmmPackageReader(), new LmmPackageWriter(), translator);

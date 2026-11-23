@@ -1,6 +1,75 @@
 <Application x:Class="InkCase.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Palette keys live here so ThemeManager can replace them at runtime and
+        every DynamicResource in MainWindow.xaml re-resolves. Values below are
+        the light defaults; the dark ones are applied by ThemeManager.Apply().
+    -->
     <Application.Resources>
+        <SolidColorBrush x:Key="Bg" Color="#EEECE5" />
+        <SolidColorBrush x:Key="Surface" Color="#FFFEFB" />
+        <SolidColorBrush x:Key="Surface2" Color="#FAF8F2" />
+        <SolidColorBrush x:Key="Ink" Color="#1B1E23" />
+        <SolidColorBrush x:Key="Muted" Color="#646A72" />
+        <SolidColorBrush x:Key="Line" Color="#E2DCCF" />
+        <SolidColorBrush x:Key="Brand" Color="#0D5A53" />
+        <SolidColorBrush x:Key="BrandSoft" Color="#E8F0ED" />
+        <SolidColorBrush x:Key="Red" Color="#B23A2C" />
+        <SolidColorBrush x:Key="Amber" Color="#A9803A" />
+        <SolidColorBrush x:Key="Hl" Color="#FFE08A" />
+        <SolidColorBrush x:Key="Hover" Color="#DCEAE5" />
+        <SolidColorBrush x:Key="EmptyBg" Color="#F4F2EC" />
+        <SolidColorBrush x:Key="Evidence" Color="#FFF1B8" />
+        <SolidColorBrush x:Key="EvidenceStrong" Color="#FFD55A" />
+        <SolidColorBrush x:Key="Correct" Color="#1B7F3B" />
+
+        <!--
+            WPF's default scrollbars stay light no matter what the palette says,
+            which reads as a bright stripe down a dark page. Thin, palette-driven
+            thumb instead; the track is transparent so only the thumb shows.
+        -->
+        <Style x:Key="ThemeScrollBar" TargetType="ScrollBar">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border CornerRadius="4" Background="{DynamicResource Muted}" Opacity="0.45" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter Property="Width" Value="Auto" />
+                                <Setter Property="Height" Value="8" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto" />
+                    <Setter Property="Height" Value="8" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
     </Application.Resources>
 </Application>

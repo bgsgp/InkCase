@@ -41,9 +41,29 @@ public sealed class InkStroke
     public List<double> WidthFactors { get; set; } = [];
 }
 
+/// <summary>Anchor surface names, shared by the app and the file format.</summary>
+public static class InkSurfaces
+{
+    /// <summary>Ink on the reading pane; one layer for the whole section.</summary>
+    public const string Article = "article";
+
+    /// <summary>Ink on a question's detail pane; one layer per question.</summary>
+    public const string Answer = "answer";
+}
+
 public sealed class InkAnchor
 {
     public string? SectionId { get; set; }
+
+    /// <summary>
+    /// Which surface the stroke was drawn on: "article" (the reading pane) or
+    /// "answer" (the question detail pane). Null/absent in older files means
+    /// "article", which is where every stroke used to go.
+    /// </summary>
+    public string? Surface { get; set; }
+
+    /// <summary>For "answer" strokes: the question number whose detail the ink sits on.</summary>
+    public int? QuestionNumber { get; set; }
 }
 
 /// <summary>A single fractional-coordinate ink sample point.</summary>

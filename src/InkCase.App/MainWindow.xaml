@@ -7,7 +7,7 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="墨案" Icon="app.ico" Height="920" Width="1440" MinHeight="520" MinWidth="820"
-        WindowStyle="None" ResizeMode="CanResize" Background="#EEECE5"
+        WindowStyle="None" ResizeMode="CanResize" Background="{DynamicResource Bg}"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Display"
         AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver">
 
@@ -16,22 +16,11 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <SolidColorBrush x:Key="Bg" Color="#EEECE5" />
-        <SolidColorBrush x:Key="Surface" Color="#FFFEFB" />
-        <SolidColorBrush x:Key="Surface2" Color="#FAF8F2" />
-        <SolidColorBrush x:Key="Ink" Color="#1B1E23" />
-        <SolidColorBrush x:Key="Muted" Color="#646A72" />
-        <SolidColorBrush x:Key="Line" Color="#E2DCCF" />
-        <SolidColorBrush x:Key="Brand" Color="#0D5A53" />
-        <SolidColorBrush x:Key="BrandSoft" Color="#E8F0ED" />
-        <SolidColorBrush x:Key="Red" Color="#B23A2C" />
-        <SolidColorBrush x:Key="Amber" Color="#A9803A" />
-        <SolidColorBrush x:Key="Hl" Color="#FFE08A" />
 
         <Style x:Key="ToolButton" TargetType="Button">
-            <Setter Property="Background" Value="#FFFEFB" />
-            <Setter Property="Foreground" Value="{StaticResource Ink}" />
-            <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+            <Setter Property="Background" Value="{DynamicResource Surface}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="11,5" />
             <Setter Property="Margin" Value="0,0,6,0" />
@@ -48,11 +37,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="B" Property="Background" Value="{StaticResource BrandSoft}" />
-                                <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Brand}" />
+                                <Setter TargetName="B" Property="Background" Value="{DynamicResource BrandSoft}" />
+                                <Setter TargetName="B" Property="BorderBrush" Value="{DynamicResource Brand}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="B" Property="Background" Value="#DCEAE5" />
+                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Hover}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -61,9 +50,9 @@
         </Style>
 
         <Style x:Key="ToolToggle" TargetType="ToggleButton">
-            <Setter Property="Background" Value="#FFFEFB" />
-            <Setter Property="Foreground" Value="{StaticResource Ink}" />
-            <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+            <Setter Property="Background" Value="{DynamicResource Surface}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="11,5" />
             <Setter Property="Margin" Value="0,0,6,0" />
@@ -80,11 +69,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="B" Property="Background" Value="{StaticResource BrandSoft}" />
+                                <Setter TargetName="B" Property="Background" Value="{DynamicResource BrandSoft}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="B" Property="Background" Value="{StaticResource Brand}" />
-                                <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Brand}" />
+                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Brand}" />
+                                <Setter TargetName="B" Property="BorderBrush" Value="{DynamicResource Brand}" />
                                 <Setter Property="Foreground" Value="White" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -94,7 +83,7 @@
         </Style>
 
         <Style x:Key="SegTab" TargetType="TabItem">
-            <Setter Property="Foreground" Value="{StaticResource Muted}" />
+            <Setter Property="Foreground" Value="{DynamicResource Muted}" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
@@ -105,11 +94,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="B" Property="Background" Value="{StaticResource Surface2}" />
+                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Surface2}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="B" Property="Background" Value="{StaticResource BrandSoft}" />
-                                <Setter Property="Foreground" Value="{StaticResource Brand}" />
+                                <Setter TargetName="B" Property="Background" Value="{DynamicResource BrandSoft}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brand}" />
                                 <Setter Property="FontWeight" Value="SemiBold" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -119,8 +108,8 @@
         </Style>
 
         <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Surface}" />
-            <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+            <Setter Property="Background" Value="{DynamicResource Surface}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="14" />
         </Style>
@@ -128,8 +117,8 @@
 
     <DockPanel>
         <!-- ================= header ================= -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource Surface}"
-                BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Surface}"
+                BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
             <StackPanel>
                 <!-- brand row: drag area + window buttons -->
                 <Grid Height="54" Background="Transparent"
@@ -138,9 +127,9 @@
                         <Image Source="app.ico" Width="32" Height="32" VerticalAlignment="Center"
                                RenderOptions.BitmapScalingMode="NearestNeighbor" />
                         <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="墨案" FontSize="15.5" FontWeight="SemiBold" Foreground="{StaticResource Ink}" />
+                            <TextBlock Text="墨案" FontSize="15.5" FontWeight="SemiBold" Foreground="{DynamicResource Ink}" />
                             <TextBlock x:Name="SubtitleText" Text=".lmm 试卷 · 未打开"
-                                       FontSize="11.5" Foreground="{StaticResource Muted}" />
+                                       FontSize="11.5" Foreground="{DynamicResource Muted}" />
                         </StackPanel>
                     </StackPanel>
 
@@ -182,11 +171,11 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="B" Property="Background" Value="{StaticResource Surface2}" />
+                                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Surface2}" />
                                             </Trigger>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Brand}" />
-                                                <Setter TargetName="B" Property="Background" Value="{StaticResource Surface}" />
+                                                <Setter TargetName="B" Property="BorderBrush" Value="{DynamicResource Brand}" />
+                                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Surface}" />
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -198,8 +187,8 @@
                         <DataTemplate>
                             <StackPanel>
                                 <TextBlock Text="{Binding Header}" FontSize="13" FontWeight="SemiBold"
-                                           Foreground="{StaticResource Ink}" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Sub}" FontSize="10.5" Foreground="{StaticResource Muted}"
+                                           Foreground="{DynamicResource Ink}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Sub}" FontSize="10.5" Foreground="{DynamicResource Muted}"
                                            TextTrimming="CharacterEllipsis" MaxWidth="220" />
                             </StackPanel>
                         </DataTemplate>
@@ -207,7 +196,7 @@
                 </ListBox>
 
                 <!-- toolbar -->
-                <Border Background="{StaticResource Surface2}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+                <Border Background="{DynamicResource Surface2}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0">
                     <WrapPanel Margin="14,7" Orientation="Horizontal">
                         <Button Content="打开…" Style="{StaticResource ToolButton}" Click="OpenPaper_Click"
                                 ToolTip="打开 .lmm 试卷 (Ctrl+O)" />
@@ -216,7 +205,7 @@
                         <Button Content="保存" Style="{StaticResource ToolButton}" Click="SavePaper_Click"
                                 ToolTip="保存 (Ctrl+S)" />
                         <Button Content="另存为…" Style="{StaticResource ToolButton}" Click="SaveAsPaper_Click" />
-                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
+                        <Rectangle Width="1" Height="20" Fill="{DynamicResource Line}" Margin="4,0,10,0" />
 
                         <ToggleButton x:Name="InkToggle" Content="批注" Style="{StaticResource ToolToggle}"
                                       Checked="InkToggle_Changed" Unchecked="InkToggle_Changed"
@@ -234,33 +223,36 @@
                                       Click="InkStyle_Click" ToolTip="起笔饱满、收笔渐细" />
                         <ToggleButton x:Name="InkStyleHighlighter" Content="荧光" Tag="highlighter" Style="{StaticResource ToolToggle}"
                                       Click="InkStyle_Click" ToolTip="半透明荧光笔，适合大字横扫" />
-                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
+                        <Rectangle Width="1" Height="20" Fill="{DynamicResource Line}" Margin="4,0,10,0" />
                         <!-- 粗细：作用于当前这支笔，每支笔各记各的宽度。 -->
                         <Button x:Name="WidthDown" Content="细" Style="{StaticResource ToolButton}"
                                 Click="WidthDown_Click" ToolTip="当前这支笔细一档（Ctrl+[）" />
-                        <TextBlock x:Name="WidthText" Text="5.0" Foreground="{StaticResource Muted}" FontSize="12"
+                        <TextBlock x:Name="WidthText" Text="5.0" Foreground="{DynamicResource Muted}" FontSize="12"
                                    VerticalAlignment="Center" MinWidth="30" TextAlignment="Center"
                                    ToolTip="当前这支笔的基准粗细（DIP）；同一支笔换回来还是这个宽度" />
                         <Button x:Name="WidthUp" Content="粗" Style="{StaticResource ToolButton}"
                                 Click="WidthUp_Click" ToolTip="当前这支笔粗一档（Ctrl+]）" />
-                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
+                        <Rectangle Width="1" Height="20" Fill="{DynamicResource Line}" Margin="4,0,10,0" />
                         <Button Content="撤销一笔" Style="{StaticResource ToolButton}" Click="UndoInk_Click" />
                         <Button Content="清除本节" Style="{StaticResource ToolButton}" Click="ClearInk_Click" />
-                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
+                        <Rectangle Width="1" Height="20" Fill="{DynamicResource Line}" Margin="4,0,10,0" />
 
+                        <Button x:Name="ThemeBtn" Content="外观：自动" Style="{StaticResource ToolButton}"
+                                Click="Theme_Click" ToolTip="跟随 Windows 深浅色；点一下在 自动 → 浅色 → 深色 之间循环" />
+                        <Rectangle Width="1" Height="20" Fill="{DynamicResource Line}" Margin="4,0,10,0" />
                         <ToggleButton x:Name="RevealToggle" Content="显示全部答案" Style="{StaticResource ToolToggle}"
                                       Checked="RevealToggle_Changed" Unchecked="RevealToggle_Changed"
                                       ToolTip="一键显示 / 隐藏所有题目的答案与解析" />
-                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
+                        <Rectangle Width="1" Height="20" Fill="{DynamicResource Line}" Margin="4,0,10,0" />
 
                         <Button Content="A−" Style="{StaticResource ToolButton}" Click="ZoomOut_Click" ToolTip="缩小字号" />
-                        <TextBlock x:Name="ZoomText" Text="100%" Foreground="{StaticResource Muted}" FontSize="12"
+                        <TextBlock x:Name="ZoomText" Text="100%" Foreground="{DynamicResource Muted}" FontSize="12"
                                    VerticalAlignment="Center" Margin="0,0,6,0" />
                         <Button Content="A＋" Style="{StaticResource ToolButton}" Click="ZoomIn_Click" ToolTip="放大字号" />
 
-                        <TextBlock x:Name="StatusText" Text="就绪" Foreground="{StaticResource Muted}" FontSize="12"
+                        <TextBlock x:Name="StatusText" Text="就绪" Foreground="{DynamicResource Muted}" FontSize="12"
                                    VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis" />
-                        <TextBlock x:Name="VersionText" Foreground="{StaticResource Muted}" FontSize="11" Opacity="0.8"
+                        <TextBlock x:Name="VersionText" Foreground="{DynamicResource Muted}" FontSize="11" Opacity="0.8"
                                    VerticalAlignment="Center" Margin="10,0,0,0"
                                    ToolTip="版本号 = 大版本.小版本.本小版本提交数.总提交数" />
                     </WrapPanel>
@@ -282,14 +274,17 @@
                     <Border DockPanel.Dock="Top" Padding="24,16,24,10">
                         <StackPanel>
                             <TextBlock x:Name="ArticleTitle" FontSize="20" FontWeight="SemiBold"
-                                       Foreground="{StaticResource Ink}" TextWrapping="Wrap" />
-                            <TextBlock x:Name="ArticleMeta" FontSize="12" Foreground="{StaticResource Muted}"
+                                       Foreground="{DynamicResource Ink}" TextWrapping="Wrap" />
+                            <TextBlock x:Name="ArticleMeta" FontSize="12" Foreground="{DynamicResource Muted}"
                                        Margin="0,5,0,0" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
 
                     <ScrollViewer x:Name="ArticleScroll" VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0">
+                        <ScrollViewer.Resources>
+                            <Style TargetType="ScrollBar" BasedOn="{StaticResource ThemeScrollBar}" />
+                        </ScrollViewer.Resources>
                         <Grid>
                             <StackPanel x:Name="ArticlePanel" Margin="28,6,34,120" />
                             <controls:InkCanvasElement x:Name="InkCanvas"
@@ -328,16 +323,16 @@
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="ListBoxItem">
                                                     <Border x:Name="B" Background="Transparent" CornerRadius="9" Margin="0,0,0,6"
-                                                            Padding="12,9" BorderThickness="1" BorderBrush="{StaticResource Line}">
+                                                            Padding="12,9" BorderThickness="1" BorderBrush="{DynamicResource Line}">
                                                         <ContentPresenter />
                                                     </Border>
                                                     <ControlTemplate.Triggers>
                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="B" Property="Background" Value="{StaticResource Surface2}" />
+                                                            <Setter TargetName="B" Property="Background" Value="{DynamicResource Surface2}" />
                                                         </Trigger>
                                                         <Trigger Property="IsSelected" Value="True">
-                                                            <Setter TargetName="B" Property="Background" Value="{StaticResource BrandSoft}" />
-                                                            <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Brand}" />
+                                                            <Setter TargetName="B" Property="Background" Value="{DynamicResource BrandSoft}" />
+                                                            <Setter TargetName="B" Property="BorderBrush" Value="{DynamicResource Brand}" />
                                                         </Trigger>
                                                     </ControlTemplate.Triggers>
                                                 </ControlTemplate>
@@ -349,18 +344,30 @@
                                     <DataTemplate>
                                         <StackPanel>
                                             <TextBlock Text="{Binding Header}" FontWeight="SemiBold" FontSize="13"
-                                                       Foreground="{StaticResource Ink}" />
-                                            <TextBlock Text="{Binding Preview}" Foreground="{StaticResource Muted}"
+                                                       Foreground="{DynamicResource Ink}" />
+                                            <TextBlock Text="{Binding Preview}" Foreground="{DynamicResource Muted}"
                                                        FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
 
-                            <Border Grid.Row="1" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0"
-                                    Background="{StaticResource Surface2}" MaxHeight="330">
+                            <Border Grid.Row="1" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0"
+                                    Background="{DynamicResource Surface2}" MaxHeight="330">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                    <StackPanel x:Name="DetailPanel" Margin="16,12,16,20" />
+                                    <ScrollViewer.Resources>
+                                        <Style TargetType="ScrollBar" BasedOn="{StaticResource ThemeScrollBar}" />
+                                    </ScrollViewer.Resources>
+                                    <Grid>
+                                        <StackPanel x:Name="DetailPanel" Margin="16,12,16,20" />
+                                        <!-- 答案区也能手写：同一套笔，锚在「哪个题」的详情上。 -->
+                                        <controls:InkCanvasElement x:Name="AnswerInkCanvas"
+                                                                   Height="{Binding ActualHeight, ElementName=DetailPanel}"
+                                                                   HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                                                   Surface="answer"
+                                                                   Visibility="Collapsed"
+                                                                   StrokeFinished="AnswerInkCanvas_StrokeFinished" />
+                                    </Grid>
                                 </ScrollViewer>
                             </Border>
                         </Grid>
@@ -378,7 +385,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <Button x:Name="TranslateBtn" Content="机翻本节" Style="{StaticResource ToolButton}"
                                             Click="Translate_Click" ToolTip="调用在线翻译（MyMemory）补齐中英对照" />
-                                    <TextBlock x:Name="TranslateHint" Foreground="{StaticResource Muted}" FontSize="11.5"
+                                    <TextBlock x:Name="TranslateHint" Foreground="{DynamicResource Muted}" FontSize="11.5"
                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="260" />
                                 </StackPanel>
                             </Border>
@@ -397,15 +404,15 @@
             </Border>
 
             <!-- empty state -->
-            <Border x:Name="EmptyState" Grid.ColumnSpan="3" Background="#F4F2EC" CornerRadius="14"
-                    BorderBrush="{StaticResource Line}" BorderThickness="1">
+            <Border x:Name="EmptyState" Grid.ColumnSpan="3" Background="{DynamicResource EmptyBg}" CornerRadius="14"
+                    BorderBrush="{DynamicResource Line}" BorderThickness="1">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460">
                     <Image Source="app.ico" Width="64" Height="64" HorizontalAlignment="Center"
                            RenderOptions.BitmapScalingMode="NearestNeighbor" />
-                    <TextBlock Text="还没有打开试卷" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource Ink}"
+                    <TextBlock Text="还没有打开试卷" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource Ink}"
                                HorizontalAlignment="Center" Margin="0,18,0,6" />
                     <TextBlock Text="把 .lmm 文件拖到窗口里，或点下面的按钮。壳本身不带任何试卷内容。"
-                               FontSize="13" Foreground="{StaticResource Muted}" TextWrapping="Wrap"
+                               FontSize="13" Foreground="{DynamicResource Muted}" TextWrapping="Wrap"
                                TextAlignment="Center" LineHeight="22" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0">
                         <Button Content="打开 .lmm…" Style="{StaticResource ToolButton}" Padding="18,9" FontSize="13.5"
@@ -414,7 +421,7 @@
                                 Margin="10,0,0,0" Click="Import_Click" />
                     </StackPanel>
                     <TextBlock Text="Ctrl+O 打开 · Ctrl+S 保存 · Ctrl+I 导入" FontSize="11.5"
-                               Foreground="{StaticResource Muted}" HorizontalAlignment="Center" Margin="0,16,0,0" />
+                               Foreground="{DynamicResource Muted}" HorizontalAlignment="Center" Margin="0,16,0,0" />
                 </StackPanel>
             </Border>
         </Grid>

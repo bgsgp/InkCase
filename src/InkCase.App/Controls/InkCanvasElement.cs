@@ -57,6 +57,16 @@ public sealed class InkCanvasElement : FrameworkElement
 
     public string? SectionId { get; set; }
 
+    /// <summary>
+    /// Which surface these strokes belong to: "article" for the reading pane,
+    /// "answer" for the question detail pane. Stored on the anchor so a paper
+    /// can carry annotation on both without the two layers mixing.
+    /// </summary>
+    public string Surface { get; set; } = Lmm.Core.Model.InkSurfaces.Article;
+
+    /// <summary>The question whose detail pane is inked (only for surface "answer").</summary>
+    public int? QuestionNumber { get; set; }
+
     public bool InkEnabled
     {
         get => _inkEnabled;
@@ -317,7 +327,7 @@ public sealed class InkCanvasElement : FrameworkElement
         var stroke = new InkStroke
         {
             Id = $"stroke-{Guid.NewGuid():N}",
-            Anchor = new InkAnchor { SectionId = SectionId },
+            Anchor = new InkAnchor { SectionId = SectionId, Surface = Surface, QuestionNumber = QuestionNumber },
             Color = built.Color,
             Tool = built.ToolId,
             BaseWidth = built.BaseWidth,

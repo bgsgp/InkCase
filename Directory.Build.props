@@ -2,16 +2,22 @@
 
   <!--
     版本号方案（用户约定）：大版本.小版本.本小版本提交数.总提交数
-    例：0.1.9.9 = 大版本 0、小版本 1、这一小版里第 9 个提交、仓库第 9 个提交。
+    起点是旧版 Claude 生成的 2.3.1.13（用户指定的「从我命的版本号开始堆」），
+    所以大版本固定 2、小版本固定 3，后两段继续往上加：
+    2.3.1.14 → 2.3.2.15 → …（本小版本提交数在本小版 tag 之后重新数）。
 
-    大版本 / 小版本在这里手动改（发新小版本时先打 tag，比如 v0.2，
+    InkCaseTotalOffset = 2 是让「总提交数」接上旧版本的 13：本仓库历史比旧版
+    少两个提交，不补这一截就会出现 2.3.1.11 < 2.3.1.13 的倒流。
+
+    大版本 / 小版本在这里手动改（发新小版本时先打 tag，比如 v2.4，
     后两段就会从 tag 之后重新数）。后两段由 git 现算，所以发布出来的
     exe 的版本号永远和当时的提交历史对得上，不需要手动同步。
-    在没有 git 或者源码是解压包的情况下，回退到 0.1.0.0。
+    在没有 git 或者源码是解压包的情况下，回退到 2.3.0.0。
   -->
   <PropertyGroup>
-    <InkCaseMajor>0</InkCaseMajor>
-    <InkCaseMinor>1</InkCaseMinor>
+    <InkCaseMajor>2</InkCaseMajor>
+    <InkCaseMinor>3</InkCaseMinor>
+    <InkCaseTotalOffset>2</InkCaseTotalOffset>
     <Version>$(InkCaseMajor).$(InkCaseMinor).0.0</Version>
   </PropertyGroup>
 
@@ -42,7 +48,7 @@
     </Exec>
 
     <PropertyGroup Condition="'$(InkCaseTotalExit)' == '0'">
-      <InkCaseTotalCommits>$(InkCaseTotalRaw.Trim())</InkCaseTotalCommits>
+      <InkCaseTotalCommits>$([MSBuild]::Add($(InkCaseTotalRaw.Trim()), $(InkCaseTotalOffset)))</InkCaseTotalCommits>
       <InkCasePatchCommits Condition="'$(InkCasePatchExit)' == '0'">$(InkCasePatchRaw.Trim())</InkCasePatchCommits>
       <InkCasePatchCommits Condition="'$(InkCasePatchCommits)' == ''">$(InkCaseTotalCommits)</InkCasePatchCommits>
       <Version>$(InkCaseMajor).$(InkCaseMinor).$(InkCasePatchCommits).$(InkCaseTotalCommits)</Version>

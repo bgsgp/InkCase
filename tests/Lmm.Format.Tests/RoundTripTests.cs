@@ -59,6 +59,41 @@ public class RoundTripTests
         Assert.Equal(original.InkStrokes[0].WidthFactors, roundTripped.InkStrokes[0].WidthFactors);
     }
 
+    /// <summary>
+    /// Ink on a question's answer pane is anchored by section + surface + question
+    /// number; all three have to survive a save/load, otherwise the strokes would
+    /// come back on the article layer of whichever question happens to be selected.
+    /// </summary>
+    [Fact]
+    public void WriteThenRead_KeepsAnswerPaneAnchors()
+    {
+        var paper = BuildSamplePaper();
+        paper.InkStrokes.Add(new InkStroke
+        {
+            Id = "stroke-0002",
+            Anchor = new InkAnchor { SectionId = "sec-0001", Surface = InkSurfaces.Answer, QuestionNumber = 7 },
+            Color = "#D33A2C",
+            Tool = "pen",
+            BaseWidth = 5.0,
+            Points = [new InkPoint(0.4, 0.4), new InkPoint(0.5, 0.5)],
+            WidthFactors = [1.0, 1.0],
+        });
+
+        using var mem = new MemoryStream();
+        new LmmPackageWriter().Write(paper, mem);
+        mem.Position = 0;
+        var loaded = new LmmPackageReader().Read(mem);
+
+        var answer = loaded.InkStrokes.Single(s => s.Id == "stroke-0002");
+        Assert.Equal(InkSurfaces.Answer, answer.Anchor.Surface);
+        Assert.Equal(7, answer.Anchor.QuestionNumber);
+
+        // Article strokes from older files have no Surface at all; null is read as
+        // "article" by the app, so the writer must not invent a value for them.
+        var article = loaded.InkStrokes.Single(s => s.Id == "stroke-0001");
+        Assert.Null(article.Anchor.Surface);
+    }
+
     [Fact]
     public void Read_ChunksInkStrokesAcrossMultipleFiles()
     {

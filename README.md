@@ -233,6 +233,17 @@ python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./
 - [x] 校验：保存前逐节 `Validate`，error 阻断并列出；缺模块时明确报错
 - [x] 崩溃日志：`%APPDATA%\InkCase\crash.log`（WinExe 无控制台，
       不留日志的话异常会静默消失）
+- [x] 暗夜模式（`ThemeManager`）：默认**自动跟随 Windows 的浅色/深色设置**
+      （2 秒轮询注册表，因为该设置没有可靠的变化通知），工具栏"外观"按钮
+      可在 自动 → 浅色 → 深色 之间循环，选择存 `%APPDATA%\InkCase\settings.json`。
+      调色板全部走 `Application.Resources` 的固定键 + XAML `DynamicResource`，
+      换主题只替换资源字典，不重建窗口；代码里动态生成的 TextBlock/Run 在
+      `ThemeManager.Changed` 后重渲染一次。滚动条另外做了细thumb样式，
+      否则 WPF 默认滚动条在深色页面里是一道亮白条
+- [x] 答案区也能手写：笔迹锚点从"仅节"扩成"节 + 图层（article/answer）+
+      题号"，右侧题目详情面板叠一层 `AnswerInkCanvas`，每道题一笔迹层，
+      切题就换层、撤销/清除也按当前层走；旧文件没有 `surface` 字段一律
+      视为 article，向后兼容
 
 **未完成（按原计划的下一步顺序）：**
 - [ ] Phase 3：PDF / OCR 导入管线（`Lmm.Import`，选型见下表；文本与
@@ -249,15 +260,18 @@ python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./
 
 版本号不是手写的，由 `Directory.Build.props` 在编译时用 git 算出来：
 
-- 大版本 / 小版本：`<InkCaseMajor>` / `<InkCaseMinor>` 两个属性（当前 `0.1`）。
-  发一个小版本时打 tag（如 `v0.2`），下一个版本就从那个 tag 开始数。
+- 大版本 / 小版本：`<InkCaseMajor>` / `<InkCaseMinor>` 两个属性（当前 `2.3`，
+  沿用旧版 `2.3.1.13` 的号，从用户定的那个版本继续往上堆；`v2.3` tag 打在
+  `26c0e2e`）。发一个小版本时打新 tag，下一个版本就从那个 tag 开始数。
 - 本小版本提交数：`git rev-list --count <最近 tag>..HEAD`；没有 tag 时退化为总提交数。
-- 总提交数：`git rev-list --count HEAD`。
+- 总提交数：`git rev-list --count HEAD` + `<InkCaseTotalOffset>`（当前 2）。
+  仓库曾重建过，历史比旧版少两个提交，不补这段会出现 2.3.1.11 < 2.3.1.13
+  的版本倒流。
 
 目标 `InkCaseGitVersion` 只对 `InkCase.App` 跑（在
 `GenerateAssemblyInfo;GetAssemblyVersion` 之前），把结果写进
 `Version`/`FileVersion`/`InformationalVersion`，编译日志会打一行
-「墨案 版本号 0.1.9.9」。主窗口工具栏右侧显示 `v<版本>`（读
+「墨案 版本号 2.3.1.14」。主窗口工具栏右侧显示 `v<版本>`（读
 `AssemblyInformationalVersion`，截掉 SourceLink 追加的 `+sha`）。
 
 这样提交即变版本，不需要人记得改 csproj；代价是**源码目录不是 git 仓库时
@@ -282,7 +296,7 @@ README 上面说的"到有正常网络的开发机上第一件事是 `dotnet tes
 Windows 机器上做过：
 
 - `dotnet build InkCase.slnx -c Release` —— 0 警告 0 错误（.NET SDK 11.0.100）。
-- `dotnet test InkCase.slnx -c Release` —— **54/54 全绿**
+- `dotnet test InkCase.slnx -c Release` —— **55/55 全绿**（Core 34 / Format 3 / English 8 / Import 10）
   （Lmm.Core.Tests 34、Lmm.Format.Tests 2、Lmm.Plugins.English.Tests 8、
   Lmm.Import.Tests 10）。
 - 首次跑测试挂了 1 个：`InkGeometryTests.ResamplePts_ProducesApproximatelyEqualSpacing`

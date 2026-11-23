@@ -202,7 +202,7 @@ true)` 原子替换目标文件，避免崩溃导致半写坏档看起来像一�
 [
   {
     "id": "stroke-0042",
-    "anchor": { "sectionId": "sec-0001" },
+    "anchor": { "sectionId": "sec-0001", "surface": "answer", "questionNumber": 21 },
     "color": "#D33A2C",
     "baseWidth": 3.0,
     "points": [{ "x": 0.1234, "y": 0.5678 }],
@@ -215,6 +215,8 @@ true)` 原子替换目标文件，避免崩溃导致半写坏档看起来像一�
 |---|---|
 | `id` | 笔迹稳定标识 |
 | `anchor.sectionId` | 这笔画锚定在哪个 section 的讲评 UI 上 |
+| `anchor.surface` | 画在哪一层：`"article"`（文章区，缺省）/ `"answer"`（某道题的答案/详情区）。旧文件没有该字段，一律视为 `"article"` |
+| `anchor.questionNumber` | 仅当 `surface` 为 `"answer"` 时有意义：这道笔迹属于第几题，切题时按它过滤 |
 | `color` | 笔色，如 `"#D33A2C"` |
 | `tool` | 笔种：`"pen"`（缺省）/`"dashed"`/`"calligraphy"`/`"speed"`/`"taper"`/`"highlighter"`，决定 alpha、虚线、以及宽度来自压感/笔尖/速度 |
 | `baseWidth` | 基础笔宽（像素，相对于采集时的画布尺寸） |
