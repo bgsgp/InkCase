@@ -53,6 +53,10 @@ public partial class MainWindow : Window
     private readonly LmmPackageWriter _writer;
     private readonly ITranslationProvider _translator;
 
+    /// <summary>Per-pen base width, so switching back to a pen keeps the width dialled in.</summary>
+    private readonly Dictionary<InkTool, double> _widths = new();
+    private InkTool _tool = InkTool.Pen;
+
     private Paper? _paper;
     private ISubjectModule? _module;
     private Section? _section;
@@ -329,6 +333,14 @@ public partial class MainWindow : Window
 
         switch (e.Key)
         {
+            case Key.OemOpenBrackets:
+                NudgeWidth(-InkStyle.WidthStep);
+                e.Handled = true;
+                break;
+            case Key.OemCloseBrackets:
+                NudgeWidth(InkStyle.WidthStep);
+                e.Handled = true;
+                break;
             case Key.O:
                 OpenPaper_Click(sender, e);
                 e.Handled = true;
@@ -745,7 +757,8 @@ public partial class MainWindow : Window
     /// </summary>
     private void SetInkTool(InkTool tool)
     {
-        InkCanvas.Pen = InkStyle.For(tool);
+        _tool = tool;
+        ApplyPen();
         InkCanvas.InkColor = tool == InkTool.Highlighter
             ? Color.FromRgb(0xE9, 0xA9, 0x3B)
             : Color.FromRgb(0xD3, 0x3A, 0x2C);
@@ -762,7 +775,46 @@ public partial class MainWindow : Window
         foreach (var (button, t) in buttons) button.IsChecked = t == tool;
 
         if (InkToggle.IsChecked != true) InkToggle.IsChecked = true;
-        UpdateStatus($"笔：{ToolName(tool)}");
+        UpdateStatus($"笔：{ToolName(tool)} · 粗细 {CurrentWidth():0.0}");
+    }
+
+    /// <summary>Width currently dialled in for the active pen (factory default until changed).</summary>
+    private double CurrentWidth() =>
+        _widths.TryGetValue(_tool, out var w) ? w : InkStyle.For(_tool).BaseWidth;
+
+    /// <summary>Pushes the active pen + its width into the canvas and refreshes the readout.</summary>
+    private void ApplyPen()
+    {
+        var style = InkStyle.For(_tool);
+        InkCanvas.Pen = style with { BaseWidth = CurrentWidth() };
+        WidthText.Text = CurrentWidth().ToString("0.0");
+    }
+
+    private void WidthDown_Click(object sender, RoutedEventArgs e) => NudgeWidth(-InkStyle.WidthStep);
+
+    private void WidthUp_Click(object sender, RoutedEventArgs e) => NudgeWidth(InkStyle.WidthStep);
+
+    /// <summary>
+    /// One click = one 0.5 DIP step, clamped per pen. Width is stored per tool, not
+    /// globally: a highlighter wants 28 and a dashed guide wants 5, and swapping pens
+    /// should not silently destruct either choice.
+    /// </summary>
+    private void NudgeWidth(double delta)
+    {
+        var next = InkStyle.ClampWidth(_tool, CurrentWidth() + delta);
+        if (Math.Abs(next - CurrentWidth()) < 1e-9)
+        {
+            var (min, max) = InkStyle.WidthRange(_tool);
+            UpdateStatus(CurrentWidth() >= max
+                ? $"「{ToolName(_tool)}」已经到最粗（{max:0.#}）"
+                : $"「{ToolName(_tool)}」已经到最细（{min:0.#}）");
+            return;
+        }
+
+        _widths[_tool] = next;
+        ApplyPen();
+        if (InkToggle.IsChecked != true) InkToggle.IsChecked = true;
+        UpdateStatus($"笔：{ToolName(_tool)} · 粗细 {next:0.0}");
     }
 
     private static string ToolName(InkTool tool) => tool switch

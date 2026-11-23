@@ -234,6 +234,16 @@
                                       Click="InkStyle_Click" ToolTip="起笔饱满、收笔渐细" />
                         <ToggleButton x:Name="InkStyleHighlighter" Content="荧光" Tag="highlighter" Style="{StaticResource ToolToggle}"
                                       Click="InkStyle_Click" ToolTip="半透明荧光笔，适合大字横扫" />
+                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
+                        <!-- 粗细：作用于当前这支笔，每支笔各记各的宽度。 -->
+                        <Button x:Name="WidthDown" Content="细" Style="{StaticResource ToolButton}"
+                                Click="WidthDown_Click" ToolTip="当前这支笔细一档（Ctrl+[）" />
+                        <TextBlock x:Name="WidthText" Text="5.0" Foreground="{StaticResource Muted}" FontSize="12"
+                                   VerticalAlignment="Center" MinWidth="30" TextAlignment="Center"
+                                   ToolTip="当前这支笔的基准粗细（DIP）；同一支笔换回来还是这个宽度" />
+                        <Button x:Name="WidthUp" Content="粗" Style="{StaticResource ToolButton}"
+                                Click="WidthUp_Click" ToolTip="当前这支笔粗一档（Ctrl+]）" />
+                        <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />
                         <Button Content="撤销一笔" Style="{StaticResource ToolButton}" Click="UndoInk_Click" />
                         <Button Content="清除本节" Style="{StaticResource ToolButton}" Click="ClearInk_Click" />
                         <Rectangle Width="1" Height="20" Fill="{StaticResource Line}" Margin="4,0,10,0" />

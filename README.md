@@ -105,14 +105,19 @@ public interface IQuestionTypeHandler {
 
 工具栏六支笔，对应 `InkStyle.For(...)` 的工厂参数（`InkTool` 枚举）：
 
-| 笔 | baseWidth | 压感 | 关键参数 | 效果 |
-|---|---|---|---|---|
-| 钢笔 pen | 3.0 | 开 | pressureMinFactor 0.35 | 压感细粗 + 起收笔保持压力（holdEnds） |
-| 虚线 dashed | 3.0 | 关 | dashLength 10 / dashGap 8 | 等宽虚线，沿弧长切段 |
-| 书法 calligraphy | 6.0 | 开 | directionStrength 0.60 | 横细竖粗，斜切粗块，反折补笔 |
-| 速度 speed | 4.0 | 开 | speedStrength 0.8 | 快细慢粗（窗口 ±25ms，triweight 模糊） |
-| 收锋 taper | 4.0 | 开 | taperEnabled, taperMinFactor 0.50 | 起笔粗、收笔尖 |
-| 荧光 highlighter | 16.0 | 关 | AlphaScale 0.45 | 半透明粗带（holdEnds） |
+| 笔 | 默认 baseWidth | 可调范围 | 压感 | 关键参数 | 效果 |
+|---|---|---|---|---|---|
+| 钢笔 pen | 5.0 | 1–40 | 开 | pressureMinFactor 0.35 | 压感细粗 + 起收笔保持压力（holdEnds） |
+| 虚线 dashed | 5.0 | 1–40 | 关 | dashLength 10 / dashGap 8 | 等宽虚线，沿弧长切段 |
+| 书法 calligraphy | 9.0 | 1–40 | 开 | directionStrength 0.60 | 横细竖粗，斜切粗块，反折补笔 |
+| 速度 speed | 6.0 | 1–40 | 开 | speedStrength 0.8 | 快细慢粗（窗口 ±25ms，triweight 模糊） |
+| 收锋 taper | 6.0 | 1–40 | 开 | taperEnabled, taperMinFactor 0.50 | 起笔粗、收笔尖 |
+| 荧光 highlighter | 28.0 | 6–120 | 关 | AlphaScale 0.45 | 半透明粗带（holdEnds） |
+
+默认宽度**比 xnotes 粗**（xnotes 是手机尺寸的 3.0–6.0）：这一版是给 86 寸 4K
+一体机上课用的，后排要看得见。工具栏「细 / 5.0 / 粗」调的就是当前这支笔的
+`BaseWidth`（步长 0.5，快捷键 `Ctrl+[` / `Ctrl+]`；每支笔各记各的，切回来还是
+你调好的宽度）。已经落盘的笔迹存的是自己的宽度，不会被后来的调整改掉。
 
 唯一偏离 xnotes 的地方是荧光笔：xnotes 用 `MULTIPLY` 混合 + alpha 0.90，
 WPF 的 `DrawingContext` 只有 source-over，0.9 会直接把字盖住，所以压到 0.45
@@ -276,8 +281,8 @@ README 上面说的"到有正常网络的开发机上第一件事是 `dotnet tes
 Windows 机器上做过：
 
 - `dotnet build InkCase.slnx -c Release` —— 0 警告 0 错误（.NET SDK 11.0.100）。
-- `dotnet test InkCase.slnx -c Release` —— **49/49 全绿**
-  （Lmm.Core.Tests 29、Lmm.Format.Tests 2、Lmm.Plugins.English.Tests 8、
+- `dotnet test InkCase.slnx -c Release` —— **53/53 全绿**
+  （Lmm.Core.Tests 33、Lmm.Format.Tests 2、Lmm.Plugins.English.Tests 8、
   Lmm.Import.Tests 10）。
 - 首次跑测试挂了 1 个：`InkGeometryTests.ResamplePts_ProducesApproximatelyEqualSpacing`
   实测间距 1.17（期望 3.5–4.5）。原因是 `InkGeometry.ResamplePts` 的记账 bug：

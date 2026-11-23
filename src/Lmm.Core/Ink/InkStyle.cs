@@ -61,19 +61,44 @@ public sealed record InkStyle(
         _ => InkTool.Pen,
     };
 
-    /// <summary>Factory defaults, one row per tool (xnotes `ToolDefaults.configFor`).</summary>
+    /// <summary>
+    /// Factory defaults, one row per tool. The shape of each row follows xnotes'
+    /// `ToolDefaults.configFor` (pressure on/off, nib strength, taper, dash pitch);
+    /// the *widths* are deliberately heavier than xnotes' phone-sized 3.0–6.0,
+    /// because the target is a 86" 4K panel read from the back of a classroom —
+    /// the toolbar 细/粗 buttons scale from here.
+    /// </summary>
     public static InkStyle For(InkTool tool) => tool switch
     {
-        InkTool.Dashed => new InkStyle(tool, 3.0, false, 1.0, 0.0, 0.0, false, 0.0, 1.0, 10.0, 8.0),
-        InkTool.Calligraphy => new InkStyle(tool, 6.0, true, 0.40, 0.60, 0.0, false, 0.0, 1.0, 10.0, 8.0),
-        InkTool.Speed => new InkStyle(tool, 4.0, true, 0.35, 0.0, 0.8, false, 0.0, 1.0, 10.0, 8.0),
-        InkTool.Taper => new InkStyle(tool, 4.0, true, 0.45, 0.0, 0.0, true, 0.50, 1.0, 10.0, 8.0),
+        InkTool.Dashed => new InkStyle(tool, 5.0, false, 1.0, 0.0, 0.0, false, 0.0, 1.0, 10.0, 8.0),
+        InkTool.Calligraphy => new InkStyle(tool, 9.0, true, 0.40, 0.60, 0.0, false, 0.0, 1.0, 10.0, 8.0),
+        InkTool.Speed => new InkStyle(tool, 6.0, true, 0.35, 0.0, 0.8, false, 0.0, 1.0, 10.0, 8.0),
+        InkTool.Taper => new InkStyle(tool, 6.0, true, 0.45, 0.0, 0.0, true, 0.50, 1.0, 10.0, 8.0),
         // xnotes composites the highlighter with MULTIPLY at alpha 0.90. WPF's plain
         // source-over would blot the text out at that alpha, so the same intended tint
         // is dialled to 0.45 here rather than faking a blend mode the renderer lacks.
-        InkTool.Highlighter => new InkStyle(tool, 16.0, false, 1.0, 0.0, 0.0, false, 0.0, 0.45, 10.0, 8.0),
-        _ => new InkStyle(InkTool.Pen, 3.0, true, 0.35, 0.0, 0.0, false, 0.0, 1.0, 10.0, 8.0),
+        InkTool.Highlighter => new InkStyle(tool, 28.0, false, 1.0, 0.0, 0.0, false, 0.0, 0.45, 10.0, 8.0),
+        _ => new InkStyle(InkTool.Pen, 5.0, true, 0.35, 0.0, 0.0, false, 0.0, 1.0, 10.0, 8.0),
     };
+
+    /// <summary>Width step used by the toolbar 细/粗 buttons (xnotes `WIDTH_STEP`).</summary>
+    public const double WidthStep = 0.5;
+
+    /// <summary>
+    /// Smallest and largest width a user may dial in for a tool. The highlighter
+    /// starts big and goes bigger (a 4K back-row sweep); the fine tools stop at 1.0
+    /// so nobody can make a pen invisible.
+    /// </summary>
+    public static (double Min, double Max) WidthRange(InkTool tool) => tool is InkTool.Highlighter
+        ? (6.0, 120.0)
+        : (1.0, 40.0);
+
+    /// <summary>Clamps a width into the tool's allowed range.</summary>
+    public static double ClampWidth(InkTool tool, double width)
+    {
+        var (min, max) = WidthRange(tool);
+        return Math.Clamp(width, min, max);
+    }
 
     /// <summary>The style for a persisted tool id, with a stroke's own stored width.</summary>
     public static InkStyle For(string? id, double baseWidth)
