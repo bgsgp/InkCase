@@ -94,6 +94,42 @@ public class RoundTripTests
         Assert.Null(article.Anchor.Surface);
     }
 
+    /// <summary>
+    /// Every right-hand pane gets its own ink layer; a stroke must come back on the
+    /// pane it was drawn on, not lumped onto the passage.
+    /// </summary>
+    [Fact]
+    public void WriteThenRead_KeepsRightPaneLayersApart()
+    {
+        var paper = BuildSamplePaper();
+        var panes = new[] { InkSurfaces.Structure, InkSurfaces.Bilingual, InkSurfaces.Drills };
+        foreach (var (surface, i) in panes.Select((s, i) => (s, i)))
+        {
+            paper.InkStrokes.Add(new InkStroke
+            {
+                Id = $"stroke-pane-{i}",
+                Anchor = new InkAnchor { SectionId = "sec-0001", Surface = surface },
+                Color = "#D33A2C",
+                Tool = "pen",
+                BaseWidth = 5.0,
+                Points = [new InkPoint(0.2, 0.2), new InkPoint(0.3, 0.3)],
+                WidthFactors = [1.0, 1.0],
+            });
+        }
+
+        using var mem = new MemoryStream();
+        new LmmPackageWriter().Write(paper, mem);
+        mem.Position = 0;
+        var loaded = new LmmPackageReader().Read(mem);
+
+        foreach (var (surface, i) in panes.Select((s, i) => (s, i)))
+        {
+            var stroke = loaded.InkStrokes.Single(s => s.Id == $"stroke-pane-{i}");
+            Assert.Equal(surface, stroke.Anchor.Surface);
+            Assert.Null(stroke.Anchor.QuestionNumber);
+        }
+    }
+
     [Fact]
     public void Read_ChunksInkStrokesAcrossMultipleFiles()
     {

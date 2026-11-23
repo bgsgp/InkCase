@@ -49,6 +49,18 @@ public static class InkSurfaces
 
     /// <summary>Ink on a question's detail pane; one layer per question.</summary>
     public const string Answer = "answer";
+
+    /// <summary>Ink over the paragraph-structure table.</summary>
+    public const string Structure = "structure";
+
+    /// <summary>Ink over the bilingual (English/Chinese) page.</summary>
+    public const string Bilingual = "bilingual";
+
+    /// <summary>Ink over the classroom-drill page.</summary>
+    public const string Drills = "drills";
+
+    /// <summary>Every surface a stroke can be anchored to.</summary>
+    public static readonly string[] All = [Article, Answer, Structure, Bilingual, Drills];
 }
 
 public sealed class InkAnchor

@@ -281,7 +281,8 @@
                     </Border>
 
                     <ScrollViewer x:Name="ArticleScroll" VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0">
+                                  HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0"
+                                  PreviewMouseDown="ArticleScroll_PreviewMouseDown">
                         <ScrollViewer.Resources>
                             <Style TargetType="ScrollBar" BasedOn="{StaticResource ThemeScrollBar}" />
                         </ScrollViewer.Resources>
@@ -303,6 +304,7 @@
             <!-- right card: panels -->
             <Border x:Name="RightCard" Style="{StaticResource Card}" Grid.Column="2">
                 <TabControl x:Name="RightTabs" BorderThickness="0" Background="Transparent" Padding="0"
+                            SelectionChanged="RightTabs_SelectionChanged"
                             ItemContainerStyle="{StaticResource SegTab}">
                     <TabItem Header="题目">
                         <Grid Margin="0,4,0,0">
@@ -375,7 +377,18 @@
 
                     <TabItem Header="段落结构">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="StructurePanel" Margin="16,10,16,20" />
+                            <ScrollViewer.Resources>
+                                <Style TargetType="ScrollBar" BasedOn="{StaticResource ThemeScrollBar}" />
+                            </ScrollViewer.Resources>
+                            <Grid>
+                                <StackPanel x:Name="StructurePanel" Margin="16,10,16,20" />
+                                <controls:InkCanvasElement x:Name="StructureInkCanvas"
+                                                           Height="{Binding ActualHeight, ElementName=StructurePanel}"
+                                                           HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                                           Surface="structure"
+                                                           Visibility="Collapsed"
+                                                           StrokeFinished="StructureInkCanvas_StrokeFinished" />
+                            </Grid>
                         </ScrollViewer>
                     </TabItem>
 
@@ -390,14 +403,36 @@
                                 </StackPanel>
                             </Border>
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel x:Name="BilingualPanel" Margin="16,8,16,20" />
+                                <ScrollViewer.Resources>
+                                    <Style TargetType="ScrollBar" BasedOn="{StaticResource ThemeScrollBar}" />
+                                </ScrollViewer.Resources>
+                                <Grid>
+                                    <StackPanel x:Name="BilingualPanel" Margin="16,8,16,20" />
+                                    <controls:InkCanvasElement x:Name="BilingualInkCanvas"
+                                                               Height="{Binding ActualHeight, ElementName=BilingualPanel}"
+                                                               HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                                               Surface="bilingual"
+                                                               Visibility="Collapsed"
+                                                               StrokeFinished="BilingualInkCanvas_StrokeFinished" />
+                                </Grid>
                             </ScrollViewer>
                         </DockPanel>
                     </TabItem>
 
                     <TabItem Header="课堂小练">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="DrillPanel" Margin="16,10,16,20" />
+                            <ScrollViewer.Resources>
+                                <Style TargetType="ScrollBar" BasedOn="{StaticResource ThemeScrollBar}" />
+                            </ScrollViewer.Resources>
+                            <Grid>
+                                <StackPanel x:Name="DrillPanel" Margin="16,10,16,20" />
+                                <controls:InkCanvasElement x:Name="DrillInkCanvas"
+                                                           Height="{Binding ActualHeight, ElementName=DrillPanel}"
+                                                           HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                                           Surface="drills"
+                                                           Visibility="Collapsed"
+                                                           StrokeFinished="DrillInkCanvas_StrokeFinished" />
+                            </Grid>
                         </ScrollViewer>
                     </TabItem>
                 </TabControl>

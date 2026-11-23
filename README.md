@@ -240,10 +240,13 @@ python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./
       换主题只替换资源字典，不重建窗口；代码里动态生成的 TextBlock/Run 在
       `ThemeManager.Changed` 后重渲染一次。滚动条另外做了细thumb样式，
       否则 WPF 默认滚动条在深色页面里是一道亮白条
-- [x] 答案区也能手写：笔迹锚点从"仅节"扩成"节 + 图层（article/answer）+
-      题号"，右侧题目详情面板叠一层 `AnswerInkCanvas`，每道题一笔迹层，
-      切题就换层、撤销/清除也按当前层走；旧文件没有 `surface` 字段一律
-      视为 article，向后兼容
+- [x] 右侧每一页都能手写：笔迹锚点从"仅节"扩成"节 + 图层 +
+      （仅答案区）题号"，图层是 `article` / `answer` / `structure` /
+      `bilingual` / `drills` 五个，分别叠在文章、题目详情、段落结构、
+      中英对照、课堂小练上；题目详情每道题一笔迹层，切题就换层。
+      撤销/清除作用于"当前正在看的这一页"（切右栏标签或点文章区就切换目标），
+      而不是最后一笔画在哪——否则在课堂小练上点撤销会删掉文章里的线。
+      旧文件没有 `surface` 字段一律视为 article，向后兼容
 
 **未完成（按原计划的下一步顺序）：**
 - [ ] Phase 3：PDF / OCR 导入管线（`Lmm.Import`，选型见下表；文本与
@@ -296,7 +299,7 @@ README 上面说的"到有正常网络的开发机上第一件事是 `dotnet tes
 Windows 机器上做过：
 
 - `dotnet build InkCase.slnx -c Release` —— 0 警告 0 错误（.NET SDK 11.0.100）。
-- `dotnet test InkCase.slnx -c Release` —— **55/55 全绿**（Core 34 / Format 3 / English 8 / Import 10）
+- `dotnet test InkCase.slnx -c Release` —— **56/56 全绿**（Core 34 / Format 4 / English 8 / Import 10）
   （Lmm.Core.Tests 34、Lmm.Format.Tests 2、Lmm.Plugins.English.Tests 8、
   Lmm.Import.Tests 10）。
 - 首次跑测试挂了 1 个：`InkGeometryTests.ResamplePts_ProducesApproximatelyEqualSpacing`

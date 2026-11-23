@@ -8,6 +8,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using InkCase.App.Controls;
 using Lmm.Core.Ink;
 using Lmm.Core.Model;
 using Lmm.Format;
@@ -182,7 +183,10 @@ public partial class MainWindow : Window
         {
             MessageBox.Show(this, ex.Message, "文件格式错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        // A truncated / renamed / half-copied zip surfaces as InvalidDataException from
+        // ZipArchive — a bad file, not a crash.
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                       or System.IO.InvalidDataException)
         {
             MessageBox.Show(this, ex.Message, "无法读取文件", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -435,8 +439,7 @@ public partial class MainWindow : Window
         StructurePanel.Children.Clear();
         BilingualPanel.Children.Clear();
         DrillPanel.Children.Clear();
-        InkCanvas.SetStrokes([]);
-        AnswerInkCanvas.SetStrokes([]);
+        foreach (var canvas in AllInkCanvases()) canvas.SetStrokes([]);
     }
 
     private void RenderSection()
@@ -516,6 +519,7 @@ public partial class MainWindow : Window
     {
         if (QuestionList.SelectedItem is not QuestionEntry entry) return;
         _selectedQuestionNumber = entry.Question.Number;
+        _activeSurface = InkSurfaces.Answer;
         RenderArticle();
         RenderDetail(entry.Question);
         RenderInk();
@@ -764,20 +768,25 @@ public partial class MainWindow : Window
     private void RenderInk()
     {
         var on = InkToggle.IsChecked == true;
+        var hasQuestion = _selectedQuestionNumber > 0;
 
-        InkCanvas.SectionId = _section?.Id;
-        InkCanvas.Surface = InkSurfaces.Article;
-        InkCanvas.QuestionNumber = null;
-        InkCanvas.SetStrokes(_paper is null ? [] : StrokesFor(InkSurfaces.Article));
-        InkCanvas.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        InkCanvas.InkEnabled = on;
+        AnswerInkCanvas.QuestionNumber = hasQuestion ? _selectedQuestionNumber : null;
 
-        AnswerInkCanvas.SectionId = _section?.Id;
-        AnswerInkCanvas.Surface = InkSurfaces.Answer;
-        AnswerInkCanvas.QuestionNumber = _selectedQuestionNumber > 0 ? _selectedQuestionNumber : null;
-        AnswerInkCanvas.SetStrokes(_paper is null ? [] : StrokesFor(InkSurfaces.Answer));
-        AnswerInkCanvas.Visibility = on && _selectedQuestionNumber > 0 ? Visibility.Visible : Visibility.Collapsed;
-        AnswerInkCanvas.InkEnabled = on;
+        BindInk(InkCanvas, InkSurfaces.Article, on);
+        BindInk(AnswerInkCanvas, InkSurfaces.Answer, on && hasQuestion);
+        BindInk(StructureInkCanvas, InkSurfaces.Structure, on);
+        BindInk(BilingualInkCanvas, InkSurfaces.Bilingual, on);
+        BindInk(DrillInkCanvas, InkSurfaces.Drills, on);
+    }
+
+    /// <summary>Points one ink layer at the current section and pushes its strokes in.</summary>
+    private void BindInk(InkCanvasElement canvas, string surface, bool visible)
+    {
+        canvas.SectionId = _section?.Id;
+        canvas.Surface = surface;
+        canvas.SetStrokes(_paper is null ? [] : StrokesFor(surface));
+        canvas.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        canvas.InkEnabled = visible;
     }
 
     private IEnumerable<InkStroke> StrokesFor(string surface) =>
@@ -789,6 +798,37 @@ public partial class MainWindow : Window
                 && (surface != InkSurfaces.Answer
                     ? s.Anchor.QuestionNumber is null
                     : s.Anchor.QuestionNumber == _selectedQuestionNumber));
+
+    /// <summary>Every pane that can carry ink: article plus the four right-hand pages.</summary>
+    private IEnumerable<InkCanvasElement> AllInkCanvases()
+    {
+        yield return InkCanvas;
+        yield return AnswerInkCanvas;
+        yield return StructureInkCanvas;
+        yield return BilingualInkCanvas;
+        yield return DrillInkCanvas;
+    }
+
+    /// <summary>
+    /// Undo/clear target the pane the user is looking at, not the last stroke drawn
+    /// somewhere else: switching to 课堂小练 and pressing 撤销 should not silently
+    /// delete a line from inside the passage.
+    /// </summary>
+    private void RightTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (RightTabs is null) return;
+        _activeSurface = RightTabs.SelectedIndex switch
+        {
+            1 => InkSurfaces.Structure,
+            2 => InkSurfaces.Bilingual,
+            3 => InkSurfaces.Drills,
+            0 => _selectedQuestionNumber > 0 ? InkSurfaces.Answer : InkSurfaces.Article,
+            _ => _activeSurface,
+        };
+    }
+
+    private void ArticleScroll_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e) =>
+        _activeSurface = InkSurfaces.Article;
 
     private void InkToggle_Changed(object sender, RoutedEventArgs e)
     {
@@ -814,8 +854,7 @@ public partial class MainWindow : Window
         var inkColor = tool == InkTool.Highlighter
             ? Color.FromRgb(0xE9, 0xA9, 0x3B)
             : Color.FromRgb(0xD3, 0x3A, 0x2C);
-        InkCanvas.InkColor = inkColor;
-        AnswerInkCanvas.InkColor = inkColor;
+        foreach (var canvas in AllInkCanvases()) canvas.InkColor = inkColor;
 
         var buttons = new (ToggleButton Button, InkTool Tool)[]
         {
@@ -840,8 +879,8 @@ public partial class MainWindow : Window
     private void ApplyPen()
     {
         var style = InkStyle.For(_tool);
-        InkCanvas.Pen = style with { BaseWidth = CurrentWidth() };
-        AnswerInkCanvas.Pen = style with { BaseWidth = CurrentWidth() };
+        var pen = style with { BaseWidth = CurrentWidth() };
+        foreach (var canvas in AllInkCanvases()) canvas.Pen = pen;
         WidthText.Text = CurrentWidth().ToString("0.0");
     }
 
@@ -882,45 +921,61 @@ public partial class MainWindow : Window
         _ => "钢笔",
     };
 
-    private void InkCanvas_StrokeFinished(object? sender, InkStroke stroke)
-    {
-        _activeSurface = InkSurfaces.Article;
-        AddStroke(stroke);
-    }
+    private void InkCanvas_StrokeFinished(object? sender, InkStroke stroke) =>
+        AddStroke(InkSurfaces.Article, stroke);
 
-    private void AnswerInkCanvas_StrokeFinished(object? sender, InkStroke stroke)
-    {
-        _activeSurface = InkSurfaces.Answer;
-        AddStroke(stroke);
-    }
+    private void AnswerInkCanvas_StrokeFinished(object? sender, InkStroke stroke) =>
+        AddStroke(InkSurfaces.Answer, stroke);
 
-    private void AddStroke(InkStroke stroke)
+    private void StructureInkCanvas_StrokeFinished(object? sender, InkStroke stroke) =>
+        AddStroke(InkSurfaces.Structure, stroke);
+
+    private void BilingualInkCanvas_StrokeFinished(object? sender, InkStroke stroke) =>
+        AddStroke(InkSurfaces.Bilingual, stroke);
+
+    private void DrillInkCanvas_StrokeFinished(object? sender, InkStroke stroke) =>
+        AddStroke(InkSurfaces.Drills, stroke);
+
+    private void AddStroke(string surface, InkStroke stroke)
     {
         _paper?.InkStrokes.Add(stroke);
         _dirty = true;
-        UpdateStatus(_activeSurface == InkSurfaces.Answer
-            ? $"已给第 {_selectedQuestionNumber} 题的答案区加了一笔"
-            : "已添加一笔批注");
+        _activeSurface = surface;
+        UpdateStatus(surface switch
+        {
+            InkSurfaces.Answer => $"已给第 {_selectedQuestionNumber} 题的答案区加了一笔",
+            InkSurfaces.Structure => "已在段落结构页加了一笔",
+            InkSurfaces.Bilingual => "已在中英对照页加了一笔",
+            InkSurfaces.Drills => "已在课堂小练页加了一笔",
+            _ => "已添加一笔批注",
+        });
     }
 
     private void UndoInk_Click(object sender, RoutedEventArgs e)
     {
         if (_paper is null || _section is null) return;
 
-        var last = _paper.InkStrokes.LastOrDefault(s => OnActiveSurface(s));
+        var last = _paper.InkStrokes.LastOrDefault(OnActiveSurface);
         if (last is null)
         {
-            UpdateStatus(_activeSurface == InkSurfaces.Answer
-                ? "这道题的答案区没有可撤销的笔迹"
-                : "这一节没有可撤销的笔迹");
+            UpdateStatus($"{SurfaceName(_activeSurface)}没有可撤销的笔迹");
             return;
         }
 
         _paper.InkStrokes.Remove(last);
         RenderInk();
         _dirty = true;
-        UpdateStatus(_activeSurface == InkSurfaces.Answer ? "已撤销答案区一笔" : "已撤销一笔");
+        UpdateStatus($"已撤销{SurfaceName(_activeSurface)}一笔");
     }
+
+    private string SurfaceName(string surface) => surface switch
+    {
+        InkSurfaces.Answer => $"第 {_selectedQuestionNumber} 题的答案区",
+        InkSurfaces.Structure => "段落结构页",
+        InkSurfaces.Bilingual => "中英对照页",
+        InkSurfaces.Drills => "课堂小练页",
+        _ => "本节文章",
+    };
 
     /// <summary>True when the stroke sits on the layer undo/clear currently targets.</summary>
     private bool OnActiveSurface(InkStroke stroke) =>
@@ -936,7 +991,7 @@ public partial class MainWindow : Window
         var removed = _paper.InkStrokes.RemoveAll(s => OnActiveSurface(s));
         RenderInk();
         if (removed > 0) _dirty = true;
-        var layer = _activeSurface == InkSurfaces.Answer ? "这道题的答案区" : "本节";
+        var layer = SurfaceName(_activeSurface);
         UpdateStatus(removed > 0 ? $"已清除{layer} {removed} 笔" : $"{layer}没有笔迹");
     }
 
