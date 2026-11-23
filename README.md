@@ -174,9 +174,10 @@ bug，别改回去。（为它专门加过的"闭合笔迹跳过圆帽"分支也
 
 ## 从旧课件 HTML 抠一份示范卷
 
-程序本身不带任何试卷（空壳原则），但仓库里带一个转换脚本，可以把**旧版课件
-HTML**（单文件课件里存着 `PRELOAD = {"papers": [...]}` 那个大 JSON）里的
-试卷导成 `.lmm`，用来做示范数据：
+程序本身不带任何试卷（空壳原则），交付物里也不放演示卷；仓库里只有一个转换
+脚本，需要的时候可以把**旧版课件 HTML**（单文件课件里存着
+`PRELOAD = {"papers": [...]}` 那个大 JSON）里的试卷导成 `.lmm` 自查（生成物
+不入库、不随程序分发）：
 
 ```bash
 python tools/extract-legacy-lmm.py 完形——中年危机-课件.html --out ./示例 --papers demo,pmwke0e8y2yi
@@ -281,8 +282,8 @@ README 上面说的"到有正常网络的开发机上第一件事是 `dotnet tes
 Windows 机器上做过：
 
 - `dotnet build InkCase.slnx -c Release` —— 0 警告 0 错误（.NET SDK 11.0.100）。
-- `dotnet test InkCase.slnx -c Release` —— **53/53 全绿**
-  （Lmm.Core.Tests 33、Lmm.Format.Tests 2、Lmm.Plugins.English.Tests 8、
+- `dotnet test InkCase.slnx -c Release` —— **54/54 全绿**
+  （Lmm.Core.Tests 34、Lmm.Format.Tests 2、Lmm.Plugins.English.Tests 8、
   Lmm.Import.Tests 10）。
 - 首次跑测试挂了 1 个：`InkGeometryTests.ResamplePts_ProducesApproximatelyEqualSpacing`
   实测间距 1.17（期望 3.5–4.5）。原因是 `InkGeometry.ResamplePts` 的记账 bug：

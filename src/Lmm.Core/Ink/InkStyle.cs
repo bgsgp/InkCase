@@ -72,7 +72,9 @@ public sealed record InkStyle(
     {
         InkTool.Dashed => new InkStyle(tool, 5.0, false, 1.0, 0.0, 0.0, false, 0.0, 1.0, 10.0, 8.0),
         InkTool.Calligraphy => new InkStyle(tool, 9.0, true, 0.40, 0.60, 0.0, false, 0.0, 1.0, 10.0, 8.0),
-        InkTool.Speed => new InkStyle(tool, 6.0, true, 0.35, 0.0, 0.8, false, 0.0, 1.0, 10.0, 8.0),
+        // Speed strength 0.62 (xnotes 0.8) so fast strokes stay readable at distance;
+        // InkEngine.MinSpeedFactor additionally floors the factor at 0.5.
+        InkTool.Speed => new InkStyle(tool, 6.0, true, 0.35, 0.0, 0.62, false, 0.0, 1.0, 10.0, 8.0),
         InkTool.Taper => new InkStyle(tool, 6.0, true, 0.45, 0.0, 0.0, true, 0.50, 1.0, 10.0, 8.0),
         // xnotes composites the highlighter with MULTIPLY at alpha 0.90. WPF's plain
         // source-over would blot the text out at that alpha, so the same intended tint

@@ -92,6 +92,21 @@ public sealed class InkEngineTests
     }
 
     [Fact]
+    public void Speed_FastTravelStaysLegible()
+    {
+        // Writing quickly must thin the line, not erase it: the factor is floored.
+        Assert.True(InkEngine.MinSpeedFactor >= 0.45,
+            $"speed factor floor {InkEngine.MinSpeedFactor} is too thin for a back row");
+        Assert.Equal(InkEngine.MinSpeedFactor,
+            InkEngine.SpeedFactor(InkEngine.SpeedHi * 5, 1.0, InkEngine.SpeedHi), 6);
+
+        var style = InkStyle.For(InkTool.Speed);
+        var fast = InkEngine.Build(Line(80), Uniform(80, 0.8), Times(80, 1), style);
+        Assert.True(fast.HalfWidth[40] * 2 > style.BaseWidth * 0.45,
+            $"a quick stroke drew only {fast.HalfWidth[40] * 2:F2}px wide");
+    }
+
+    [Fact]
     public void Highlighter_IgnoresPressureAndStaysWide()
     {
         var pts = Line(40);

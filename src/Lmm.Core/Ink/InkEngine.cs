@@ -66,6 +66,14 @@ public static class InkEngine
     /// <summary>Speed pen: top speed (px/ms) where the line is thinnest.</summary>
     public const double SpeedHi = 0.6;
 
+    /// <summary>
+    /// Bottom of the speed pen's width factor. xnotes lets the pen fall to
+    /// 1 - strength (0.2 at strength 0.8), which reads as a hairline when you
+    /// write quickly — fine on a phone held at arm's length, invisible from the
+    /// back of a classroom. The factor never goes below this.
+    /// </summary>
+    public const double MinSpeedFactor = 0.5;
+
     private const double SpeedWindowMs = 25.0;
     private const double SpeedFloor = 0.1;
     public const double DefaultSpeedSmoothing = 0.25;
@@ -465,7 +473,7 @@ public static class InkEngine
 
     /// <summary>The width factor a speed of v px/ms draws at.</summary>
     public static double SpeedFactor(double v, double strength, double top)
-        => 1.0 - strength * Smoothstep(0.0, top, v);
+        => Math.Max(MinSpeedFactor, 1.0 - strength * Smoothstep(0.0, top, v));
 
     private static double BlurAt(double[] f, double[] path, int n, int i, double sigma, int[] cursor)
     {
