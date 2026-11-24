@@ -712,7 +712,7 @@ public partial class MainWindow : Window
 
     private void SetZoom(double zoom)
     {
-        _zoom = Math.Clamp(Math.Round(zoom, 2), 0.8, 2.0);
+        _zoom = Math.Clamp(Math.Round(zoom, 2), 0.8, 4.0);
         UpdateZoomLabel();
         RenderArticle();
     }
