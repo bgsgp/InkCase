@@ -3,7 +3,7 @@
 ; 仅供非商业使用
 
 #define MyAppName "墨案"
-#define MyAppVersion "2.3.17.17"
+#define MyAppVersion GetVersionNumbersString("artifacts\\publish\\InkCase.exe")
 #define MyAppPublisher "丐帮集团第一院·物理版象棋开发与研究院™×丐帮集团第五院·中央编程院™"
 #define MyAppURL "https://bgsgp.github.io/InkCase"
 #define MyAppExeName "InkCase.exe"
@@ -38,9 +38,9 @@ AllowNoIcons=yes
 ; 取消注释以下行以在非管理安装模式下运行 (仅为当前用户安装)。
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir=C:\Users\鸿合HiteVision\OneDrive\桌面
-OutputBaseFilename=InkCase_Setup_v2.3.18.18
-SetupIconFile=C:\Users\鸿合HiteVision\OneDrive\桌面\墨案_2.3.17.17_打包\setup.ico
+OutputDir=artifacts
+OutputBaseFilename=InkCase_Setup_v{#MyAppVersion}
+SetupIconFile=src\InkCase.App\app.ico
 SolidCompression=yes
 WizardStyle=modern dynamic windows11
 
@@ -55,8 +55,8 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\鸿合HiteVision\OneDrive\桌面\墨案_2.3.17.17_打包\文件\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\鸿合HiteVision\OneDrive\桌面\墨案_2.3.17.17_打包\文件\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "artifacts\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "docs\authoring-lmm.md"; DestDir: "{app}"; DestName: "如何编写lmm.md"; Flags: ignoreversion
 ; 注意：不要在任何共享系统文件上使用 "Flags: ignoreversion" 
 
 [Registry]
