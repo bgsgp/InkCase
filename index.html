@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f2efe7">
+  <meta name="description" content="墨案 InkCase — 为课堂而生的英语试卷讲评与手写板书工作台。">
+  <title>墨案 InkCase · 让每一道题都讲得清楚</title>
+  <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700;900&display=swap">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f2efe7;
+      --bg-deep: #e9e4d8;
+      --paper: #fffdf7;
+      --paper-soft: #f8f5ed;
+      --ink: #19211f;
+      --muted: #68716b;
+      --line: #dcd6c8;
+      --brand: #0e5b50;
+      --brand-soft: #dce9e2;
+      --brand-bright: #16836f;
+      --red: #c6543f;
+      --amber: #e9b94f;
+      --shadow: 0 24px 70px rgba(42, 47, 40, .11);
+      --shadow-soft: 0 12px 34px rgba(42, 47, 40, .07);
+      --serif: "Noto Serif SC", "Songti SC", "STSong", serif;
+      --sans: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #151917;
+      --bg-deep: #101310;
+      --paper: #202622;
+      --paper-soft: #1a201c;
+      --ink: #eceee8;
+      --muted: #a4ada5;
+      --line: #374039;
+      --brand: #65c3a9;
+      --brand-soft: #233c32;
+      --brand-bright: #82d8bf;
+      --red: #ef8b73;
+      --amber: #eac56f;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .28);
+      --shadow-soft: 0 12px 34px rgba(0, 0, 0, .2);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 3%, color-mix(in srgb, var(--amber) 15%, transparent) 0, transparent 26rem),
+        radial-gradient(circle at 94% 22%, color-mix(in srgb, var(--brand) 11%, transparent) 0, transparent 30rem),
+        var(--bg);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      transition: background-color .3s ease, color .3s ease;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: .24;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, canvas:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--brand) 50%, transparent);
+      outline-offset: 4px;
+    }
+    ::selection { background: var(--amber); color: #19211f; }
+    .container { width: min(1180px, calc(100% - 48px)); margin-inline: auto; }
+
+    /* ===== 顶部导航 ===== */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid transparent;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      transition: background .25s ease, border-color .25s ease;
+    }
+    .nav.scrolled { background: color-mix(in srgb, var(--bg) 86%, transparent); border-color: var(--line); }
+    .nav-inner { height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: .02em; }
+    .brand-mark {
+      width: 38px; height: 38px; display: grid; place-items: center;
+      border-radius: 11px; color: #fffdf7; background: #0e5b50;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 6px 16px rgba(14,91,80,.18);
+    }
+    .brand-mark svg { width: 23px; height: 23px; }
+    .brand-name { font-family: var(--serif); font-size: 20px; }
+    .brand-en { margin-left: 7px; color: var(--muted); font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+    .nav-links { display: flex; align-items: center; gap: 32px; margin-left: auto; }
+    .nav-links a { position: relative; color: var(--muted); font-size: 14px; font-weight: 500; }
+    .nav-links a::after { content: ""; position: absolute; left: 0; right: 100%; bottom: -7px; height: 2px; background: var(--brand); transition: right .2s ease; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-links a:hover::after { right: 0; }
+    .icon-button {
+      width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 auto;
+      color: var(--ink); background: var(--paper); border: 1px solid var(--line);
+      border-radius: 50%; cursor: pointer; transition: transform .2s ease, border-color .2s ease;
+    }
+    .icon-button:hover { transform: rotate(8deg); border-color: var(--brand); }
+    .icon-button svg { width: 19px; height: 19px; }
+    .sun-icon { display: none; }
+    html[data-theme="dark"] .sun-icon { display: block; }
+    html[data-theme="dark"] .moon-icon { display: none; }
+
+    /* ===== 首屏 ===== */
+    .hero { display: grid; grid-template-columns: .9fr 1.1fr; align-items: center; gap: 64px; min-height: 720px; padding-block: 74px 92px; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 9px; padding: 7px 12px;
+      color: var(--brand); background: var(--brand-soft); border: 1px solid color-mix(in srgb, var(--brand) 15%, transparent);
+      border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .08em;
+    }
+    .eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-bright); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 12%, transparent); }
+    h1 { margin: 25px 0 22px; font-family: var(--serif); font-size: clamp(45px, 5vw, 72px); font-weight: 900; line-height: 1.2; letter-spacing: -.045em; }
+    .headline-accent { position: relative; display: inline-block; color: var(--brand); }
+    .headline-accent::after {
+      content: ""; position: absolute; left: -2%; right: -3%; bottom: -8px; height: 12px;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 11C65 3 177 3 297 7' fill='none' stroke='%23e9b94f' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+      transform: rotate(-1deg);
+    }
+    .hero-copy { max-width: 500px; margin: 0; color: var(--muted); font-size: 17px; line-height: 1.95; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 34px; }
+    .button {
+      min-height: 50px; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 0 22px; border: 1px solid transparent; border-radius: 13px; cursor: pointer;
+      font-size: 14px; font-weight: 700; transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .button:hover { transform: translateY(-2px); }
+    .button-primary { color: #fffdf7; background: #0e5b50; box-shadow: 0 10px 24px rgba(14,91,80,.22); }
+    .button-primary:hover { background: #0a4c43; box-shadow: 0 14px 30px rgba(14,91,80,.27); }
+    .button-secondary { color: var(--ink); background: var(--paper); border-color: var(--line); }
+    .button-secondary:hover { border-color: var(--brand); }
+    .button svg { width: 18px; height: 18px; }
+    .hero-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 32px; color: var(--muted); font-size: 12px; }
+    .hero-flow span { display: inline-flex; align-items: center; gap: 7px; }
+    .hero-flow b { color: var(--brand); font-size: 11px; }
+    .flow-arrow { opacity: .45; }
+
+    /* ===== 产品界面示意 ===== */
+    .hero-visual { position: relative; perspective: 1200px; }
+    .workspace {
+      position: relative; overflow: hidden; min-height: 490px;
+      background: var(--paper); border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+      border-radius: 22px; box-shadow: var(--shadow); transform: rotateY(-2deg) rotateX(1deg);
+    }
+    .window-bar { height: 48px; display: flex; align-items: center; gap: 7px; padding: 0 17px; background: var(--paper-soft); border-bottom: 1px solid var(--line); }
+    .window-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+    .window-dot:first-child { background: var(--red); }
+    .window-dot:nth-child(2) { background: var(--amber); }
+    .window-dot:nth-child(3) { background: var(--brand-bright); }
+    .window-title { margin-left: 9px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .06em; }
+    .window-zoom { margin-left: auto; padding: 4px 8px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; font-size: 9px; }
+    .workspace-tabs { display: flex; gap: 4px; padding: 12px 16px 0; border-bottom: 1px solid var(--line); }
+    .workspace-tab { padding: 8px 12px 11px; color: var(--muted); font-size: 10px; border-bottom: 2px solid transparent; }
+    .workspace-tab.active { color: var(--brand); border-color: var(--brand); font-weight: 700; }
+    .workspace-body { display: grid; grid-template-columns: 1.25fr .75fr; min-height: 376px; }
+    .article-pane { position: relative; padding: 23px 25px; border-right: 1px solid var(--line); }
+    .paper-label { color: var(--red); font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+    .article-pane h3 { margin: 9px 0 7px; font-family: Georgia, serif; font-size: 20px; font-weight: 600; }
+    .article-meta { margin-bottom: 19px; color: var(--muted); font-size: 9px; }
+    .article-text { color: color-mix(in srgb, var(--ink) 83%, var(--muted)); font-family: Georgia, serif; font-size: 11px; line-height: 1.95; }
+    .article-text p { margin: 0 0 10px; }
+    .highlight { padding: 1px 2px; background: color-mix(in srgb, var(--amber) 55%, transparent); color: var(--ink); border-radius: 2px; }
+    .question-pane { padding: 22px 18px; background: var(--paper-soft); }
+    .question-number { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-bottom: 12px; color: #fffdf7; background: #0e5b50; border-radius: 8px; font-size: 11px; font-weight: 700; }
+    .question-title { min-height: 54px; font-family: Georgia, serif; font-size: 11px; line-height: 1.6; }
+    .option { display: flex; align-items: center; gap: 7px; margin-top: 8px; padding: 7px 8px; color: var(--muted); background: var(--paper); border: 1px solid var(--line); border-radius: 7px; font-family: Georgia, serif; font-size: 9px; }
+    .option.correct { color: var(--brand); background: var(--brand-soft); border-color: color-mix(in srgb, var(--brand) 35%, transparent); }
+    .answer-note { margin-top: 15px; padding-top: 12px; color: var(--muted); border-top: 1px dashed var(--line); font-size: 9px; line-height: 1.7; }
+    .answer-note strong { color: var(--brand); }
+    .ink-scribble { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .ink-scribble path { fill: none; stroke: var(--red); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .82; }
+    .float-card {
+      position: absolute; z-index: 2; display: flex; align-items: center; gap: 10px;
+      padding: 12px 15px; background: color-mix(in srgb, var(--paper) 94%, transparent);
+      border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(10px); font-size: 11px; font-weight: 600;
+    }
+    .float-pens { left: -28px; bottom: -24px; }
+    .float-saved { right: -20px; top: -20px; }
+    .float-icon { width: 30px; height: 30px; display: grid; place-items: center; color: var(--brand); background: var(--brand-soft); border-radius: 9px; }
+    .float-icon svg { width: 16px; height: 16px; }
+    .float-card small { display: block; margin-top: 2px; color: var(--muted); font-size: 8px; font-weight: 500; }
+    .pen-dots { display: flex; gap: 3px; margin-top: 4px; }
+    .pen-dots i { width: 13px; height: 3px; border-radius: 3px; background: var(--brand); }
+    .pen-dots i:nth-child(2) { background: var(--red); }
+    .pen-dots i:nth-child(3) { background: var(--amber); }
+    .pen-dots i:nth-child(4) { background: var(--muted); }
+
+    /* ===== 特性条 ===== */
+    .feature-strip { display: grid; grid-template-columns: repeat(3, 1fr); border-block: 1px solid var(--line); }
+    .strip-item { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 25px; }
+    .strip-item + .strip-item { border-left: 1px solid var(--line); }
+    .strip-number { color: var(--brand); font-family: var(--serif); font-size: 28px; font-weight: 700; }
+    .strip-text { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .strip-text strong { display: block; color: var(--ink); font-size: 13px; }
+
+    /* ===== 通用区块 ===== */
+    .section { padding-block: 112px; }
+    .section-heading { max-width: 620px; margin-bottom: 48px; }
+    .section-kicker { color: var(--red); font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
+    .section-heading h2 { margin: 13px 0 15px; font-family: var(--serif); font-size: clamp(32px, 4vw, 46px); line-height: 1.35; letter-spacing: -.03em; }
+    .section-heading p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.85; }
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .feature-card {
+      position: relative; overflow: hidden; min-height: 340px; padding: 30px;
+      background: var(--paper); border: 1px solid var(--line); border-radius: 20px;
+      transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+    }
+    .feature-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-soft); border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
+    .feature-icon { width: 45px; height: 45px; display: grid; place-items: center; color: var(--brand); background: var(--brand-soft); border-radius: 13px; }
+    .feature-icon svg { width: 23px; height: 23px; }
+    .feature-card:nth-child(2) .feature-icon { color: var(--red); background: color-mix(in srgb, var(--red) 12%, var(--paper)); }
+    .feature-card:nth-child(3) .feature-icon { color: #8b641d; background: color-mix(in srgb, var(--amber) 25%, var(--paper)); }
+    .feature-card h3 { margin: 23px 0 12px; font-family: var(--serif); font-size: 21px; }
+    .feature-card > p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.85; }
+    .mini-ui { position: absolute; left: 30px; right: 30px; bottom: 27px; height: 86px; padding: 13px; background: var(--paper-soft); border: 1px solid var(--line); border-radius: 12px; }
+    .mini-lines { display: grid; gap: 8px; }
+    .mini-lines i { display: block; height: 5px; background: var(--line); border-radius: 5px; }
+    .mini-lines i:nth-child(1) { width: 52%; background: var(--brand); }
+    .mini-lines i:nth-child(2) { width: 88%; }
+    .mini-lines i:nth-child(3) { width: 70%; }
+    .mini-pens { display: flex; align-items: flex-end; justify-content: space-around; height: 58px; }
+    .mini-pens i { width: 8px; height: 42px; border-radius: 5px 5px 2px 2px; background: var(--brand); transform: rotate(9deg); }
+    .mini-pens i:nth-child(2) { height: 48px; background: var(--red); transform: rotate(-5deg); }
+    .mini-pens i:nth-child(3) { height: 37px; background: var(--amber); }
+    .mini-pens i:nth-child(4) { height: 45px; background: var(--muted); transform: rotate(5deg); }
+    .mini-pens i:nth-child(5) { height: 34px; background: color-mix(in srgb, var(--brand) 45%, var(--paper)); transform: rotate(-8deg); }
+    .mini-pens i:nth-child(6) { height: 44px; background: var(--ink); }
+    .mini-file { display: flex; align-items: center; justify-content: center; gap: 11px; height: 58px; color: var(--brand); }
+    .mini-file svg { width: 34px; height: 34px; }
+    .mini-file strong { display: block; font-family: Georgia, serif; font-size: 14px; }
+    .mini-file small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
+
+    /* ===== 可书写体验区 ===== */
+    .demo-section { padding-block: 30px 112px; }
+    .demo-shell { display: grid; grid-template-columns: .68fr 1.32fr; overflow: hidden; background: var(--paper); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); }
+    .demo-copy { padding: 46px 38px; background: var(--brand-soft); }
+    .demo-copy .section-kicker { color: var(--brand); }
+    .demo-copy h2 { margin: 15px 0; font-family: var(--serif); font-size: 34px; line-height: 1.4; }
+    .demo-copy > p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.9; }
+    .demo-steps { display: grid; gap: 17px; margin-top: 35px; }
+    .demo-step { display: flex; gap: 12px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .demo-step b { width: 23px; height: 23px; display: grid; place-items: center; flex: 0 0 auto; color: var(--brand); background: var(--paper); border: 1px solid color-mix(in srgb, var(--brand) 18%, transparent); border-radius: 50%; font-size: 10px; }
+    .demo-step strong { display: block; color: var(--ink); font-size: 13px; }
+    .demo-board { min-width: 0; padding: 25px; }
+    .board-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-bottom: 18px; }
+    .tool-label { margin-right: 3px; color: var(--muted); font-size: 10px; font-weight: 600; }
+    .color-tool { width: 27px; height: 27px; padding: 0; border: 4px solid var(--paper); border-radius: 50%; background: #c6543f; box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
+    .color-tool[data-color="#0e5b50"] { background: #0e5b50; }
+    .color-tool[data-color="#d49b28"] { background: #d49b28; }
+    .color-tool[data-color="#263c78"] { background: #263c78; }
+    .color-tool.active { box-shadow: 0 0 0 2px var(--ink); }
+    .width-tool { height: 28px; min-width: 33px; padding: 0 8px; color: var(--muted); background: var(--paper-soft); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: 10px; }
+    .width-tool.active { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
+    .clear-tool { margin-left: auto; padding: 6px 10px; color: var(--muted); background: transparent; border: 0; cursor: pointer; font-size: 10px; }
+    .clear-tool:hover { color: var(--red); }
+    .paper-canvas { position: relative; overflow: hidden; min-height: 410px; background: var(--paper-soft); border: 1px solid var(--line); border-radius: 15px; }
+    .paper-canvas::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(transparent 0, transparent 31px, color-mix(in srgb, var(--line) 52%, transparent) 32px); pointer-events: none; }
+    .canvas-content { position: absolute; inset: 0; padding: 30px 34px; pointer-events: none; }
+    .canvas-content .small-title { color: var(--red); font-size: 9px; font-weight: 700; letter-spacing: .16em; }
+    .canvas-content h3 { margin: 8px 0 14px; font-family: Georgia, serif; font-size: 22px; }
+    .canvas-content p { max-width: 90%; color: var(--muted); font-family: Georgia, serif; font-size: 12px; line-height: 2.65; }
+    .canvas-question { position: absolute; right: 29px; bottom: 28px; width: 190px; padding: 15px; background: color-mix(in srgb, var(--paper) 88%, transparent); border: 1px solid var(--line); border-radius: 10px; }
+    .canvas-question strong { color: var(--brand); font-size: 10px; }
+    .canvas-question p { margin: 7px 0 0; font-size: 10px; line-height: 1.7; }
+    #inkCanvas { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+    .canvas-hint { position: absolute; left: 32px; bottom: 25px; z-index: 2; display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 9px; pointer-events: none; transition: opacity .2s ease; }
+    .canvas-hint svg { width: 15px; height: 15px; }
+    .paper-canvas.has-ink .canvas-hint { opacity: 0; }
+
+    /* ===== 结尾 ===== */
+    .closing { padding: 10px 0 100px; text-align: center; }
+    .closing-inner { position: relative; overflow: hidden; padding: 64px 28px; background: #0e5b50; border-radius: 26px; color: #fffdf7; }
+    .closing-inner::before, .closing-inner::after { content: ""; position: absolute; width: 280px; height: 280px; border: 1px solid rgba(255,255,255,.1); border-radius: 50%; }
+    .closing-inner::before { left: -120px; top: -150px; box-shadow: 0 0 0 45px rgba(255,255,255,.025), 0 0 0 90px rgba(255,255,255,.02); }
+    .closing-inner::after { right: -130px; bottom: -170px; box-shadow: 0 0 0 45px rgba(255,255,255,.025), 0 0 0 90px rgba(255,255,255,.02); }
+    .closing-kicker { color: #b9d9ce; font-size: 11px; font-weight: 700; letter-spacing: .2em; }
+    .closing h2 { position: relative; margin: 15px 0 18px; font-family: var(--serif); font-size: clamp(32px, 4.5vw, 48px); }
+    .closing p { position: relative; margin: 0 auto 29px; max-width: 530px; color: #c9ddd6; font-size: 14px; line-height: 1.85; }
+    .closing .button { position: relative; color: #0e5b50; background: #fffdf7; box-shadow: none; }
+    footer { border-top: 1px solid var(--line); }
+    .footer-inner { min-height: 90px; display: flex; align-items: center; justify-content: space-between; gap: 20px; color: var(--muted); font-size: 11px; }
+    .footer-brand { color: var(--ink); font-family: var(--serif); font-size: 15px; font-weight: 700; }
+    .footer-dot { margin-inline: 8px; opacity: .5; }
+
+    .reveal { opacity: 0; transform: translateY(20px); transition: opacity .7s ease, transform .7s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+    .feature-card:nth-child(2) { transition-delay: .08s; }
+    .feature-card:nth-child(3) { transition-delay: .16s; }
+
+    @media (max-width: 1000px) {
+      .hero { grid-template-columns: 1fr; gap: 70px; padding-top: 60px; }
+      .hero-content { max-width: 680px; }
+      .hero-copy { max-width: 590px; }
+      .hero-visual { width: min(720px, 95%); margin-inline: auto; }
+      .workspace { transform: none; }
+      .demo-shell { grid-template-columns: 1fr; }
+      .demo-copy { padding: 35px; }
+      .demo-steps { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 760px) {
+      .container { width: min(100% - 30px, 1180px); }
+      .nav-inner { height: 68px; }
+      .nav-links { display: none; }
+      .hero { min-height: auto; padding-block: 48px 75px; }
+      h1 { font-size: clamp(40px, 12vw, 58px); }
+      .hero-copy { font-size: 15px; }
+      .hero-visual { width: 100%; }
+      .workspace { min-height: 430px; border-radius: 17px; }
+      .workspace-body { grid-template-columns: 1fr; }
+      .article-pane { min-height: 320px; border-right: 0; }
+      .question-pane { display: none; }
+      .float-saved { right: -6px; top: -20px; }
+      .float-pens { left: -5px; bottom: -28px; }
+      .feature-strip { grid-template-columns: 1fr; }
+      .strip-item { justify-content: flex-start; padding-inline: 10px; }
+      .strip-item + .strip-item { border-left: 0; border-top: 1px solid var(--line); }
+      .section { padding-block: 85px; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .feature-card { min-height: 320px; }
+      .demo-section { padding-bottom: 85px; }
+      .demo-copy { padding: 30px 25px; }
+      .demo-steps { grid-template-columns: 1fr; }
+      .demo-board { padding: 16px; }
+      .paper-canvas { min-height: 430px; }
+      .canvas-content { padding: 25px 23px; }
+      .canvas-content p { max-width: 100%; }
+      .canvas-question { right: 20px; width: 160px; }
+      .canvas-hint { left: 23px; }
+      .footer-inner { flex-direction: column; justify-content: center; padding-block: 24px; text-align: center; }
+    }
+    @media (max-width: 430px) {
+      .brand-en { display: none; }
+      .hero-actions .button { width: 100%; }
+      .window-title { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .article-pane { padding: 20px; }
+      .demo-copy h2 { font-size: 29px; }
+      .tool-label { width: 100%; }
+      .clear-tool { margin-left: 0; }
+      .canvas-question { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="nav" aria-label="主导航">
+    <div class="container nav-inner">
+      <a class="brand" href="#top" aria-label="墨案首页">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 19c3-1 4-3 4-6V5l8-2v10c0 4-2 7-7 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 8l8-2M4 20h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </span>
+        <span class="brand-name">墨案<span class="brand-en">InkCase</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">产品能力</a>
+        <a href="#demo">书写体验</a>
+        <a href="#about">关于墨案</a>
+      </div>
+      <button class="icon-button" id="themeToggle" type="button" aria-label="切换深色模式" title="切换明暗主题">
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <main id="top">
+    <div class="container hero">
+      <div class="hero-content reveal">
+        <div class="eyebrow"><span class="eyebrow-dot"></span>为课堂讲评与真实书写而生</div>
+        <h1>让每一道题，<br>都讲得<span class="headline-accent">清楚。</span></h1>
+        <p class="hero-copy">从试卷导入到逐题讲评，从中英对照到手写板书。墨案把散落课堂里的每一步，收进一张安静、清晰的纸面。</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#demo">
+            试着写一笔
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a class="button button-secondary" href="#features">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            看看能做什么
+          </a>
+        </div>
+        <div class="hero-flow" aria-label="讲评流程">
+          <span><b>01</b> 导入试卷</span><i class="flow-arrow">→</i>
+          <span><b>02</b> 逐题讲评</span><i class="flow-arrow">→</i>
+          <span><b>03</b> 手写板书</span><i class="flow-arrow">→</i>
+          <span><b>04</b> 留存课件</span>
+        </div>
+      </div>
+
+      <div class="hero-visual reveal" aria-label="墨案产品界面示意">
+        <div class="float-card float-saved">
+          <span class="float-icon"><svg viewBox="0 0 24 24" fill="none"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span>讲评已留存<small>文章与笔迹，一起带走</small></span>
+        </div>
+        <div class="workspace">
+          <div class="window-bar">
+            <span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span>
+            <span class="window-title">墨案 · 英语试卷讲评</span><span class="window-zoom">100%　＋</span>
+          </div>
+          <div class="workspace-tabs">
+            <span class="workspace-tab active">阅读理解 A</span><span class="workspace-tab">阅读理解 B</span><span class="workspace-tab">完形填空</span><span class="workspace-tab">语法填空</span>
+          </div>
+          <div class="workspace-body">
+            <div class="article-pane">
+              <span class="paper-label">Reading · 01</span>
+              <h3>The Value of a Pause</h3>
+              <div class="article-meta">议论文　·　约 320 词　·　中等难度</div>
+              <div class="article-text">
+                <p>In a world that celebrates speed, choosing to pause can feel like falling behind. Yet a moment of stillness often gives us the clarity that constant motion cannot.</p>
+                <p>When we stop reacting and start observing, <span class="highlight">we notice what truly matters</span>. The pause is not empty time; it is where better decisions begin.</p>
+                <p>This is why great teachers leave room for questions. Silence invites students to arrange their thoughts, rather than simply repeat an answer.</p>
+              </div>
+              <svg class="ink-scribble" viewBox="0 0 400 360" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M68 174c32 8 156 11 207-1 18-4 18 17-3 24-52 14-174 4-190-5"/>
+                <path d="M288 202c17 12 23 25 25 39m-1-14 1 15-15-3"/>
+                <path d="M86 296c29-7 53-7 78-2m-68 8c18-3 36-2 48 0"/>
+              </svg>
+            </div>
+            <aside class="question-pane">
+              <span class="question-number">21</span>
+              <div class="question-title">What is the main idea of the passage?</div>
+              <div class="option">A　Speed guarantees success.</div>
+              <div class="option correct">B　Pausing helps us decide.</div>
+              <div class="option">C　Silence wastes class time.</div>
+              <div class="option">D　Teachers answer everything.</div>
+              <div class="answer-note"><strong>解题线索</strong><br>首段提出 pause，尾段回到课堂留白；首尾呼应锁定主旨。</div>
+            </aside>
+          </div>
+        </div>
+        <div class="float-card float-pens">
+          <span class="float-icon"><svg viewBox="0 0 24 24" fill="none"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 8 3 3" stroke="currentColor" stroke-width="1.8"/></svg></span>
+          <span>六种笔迹，各有笔锋<span class="pen-dots"><i></i><i></i><i></i><i></i></span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="container feature-strip reveal">
+      <div class="strip-item"><span class="strip-number">06</span><span class="strip-text"><strong>智能笔迹</strong>钢笔、书法、荧光笔与更多</span></div>
+      <div class="strip-item"><span class="strip-number">4K</span><span class="strip-text"><strong>大屏适配</strong>为 86 寸课堂屏幕打磨</span></div>
+      <div class="strip-item"><span class="strip-number">.lmm</span><span class="strip-text"><strong>完整留存</strong>试卷、答案、讲评与板书</span></div>
+    </div>
+
+    <section class="container section" id="features">
+      <div class="section-heading reveal">
+        <span class="section-kicker">Less friction, more teaching</span>
+        <h2>少一点操作，<br>多一点真正的讲解。</h2>
+        <p>工具应该退到内容后面。墨案把常用动作放在手边，让课堂注意力始终属于题目与学生。</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card reveal">
+          <span class="feature-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m-4-4 4 4 4-4M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <h3>导入，自然成章</h3>
+          <p>支持文本、Markdown 与 Word 试卷，将文章、题目、答案和解析整理成清晰结构，少做重复排版。</p>
+          <div class="mini-ui" aria-hidden="true"><div class="mini-lines"><i></i><i></i><i></i></div></div>
+        </article>
+        <article class="feature-card reveal">
+          <span class="feature-icon"><svg viewBox="0 0 24 24" fill="none"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m13.5 8 3 3M4 15c2 1 4 1 5 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+          <h3>落笔，保留笔锋</h3>
+          <p>压感、速度、收锋与书法笔尖共同塑造笔迹。文章区与答案区都能写，讲解走到哪里，板书就跟到哪里。</p>
+          <div class="mini-ui" aria-hidden="true"><div class="mini-pens"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        </article>
+        <article class="feature-card reveal">
+          <span class="feature-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M14 3v5h5M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+          <h3>合上，仍然完整</h3>
+          <p>用开放的 .lmm 文件保存试卷与每一页手写内容。下次打开，接着上次的地方继续讲。</p>
+          <div class="mini-ui" aria-hidden="true"><div class="mini-file"><svg viewBox="0 0 40 40" fill="none"><path d="M10 4h14l7 7v25H10V4Z" stroke="currentColor" stroke-width="1.8"/><path d="M23 4v8h8" stroke="currentColor" stroke-width="1.8"/></svg><span><strong>阅读理解.lmm</strong><small>内容、结构、笔迹，都在</small></span></div></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="container demo-section" id="demo">
+      <div class="demo-shell reveal">
+        <div class="demo-copy">
+          <span class="section-kicker">A little canvas for you</span>
+          <h2>纸面已备好，<br>现在就写一笔。</h2>
+          <p>选择颜色与粗细，在右侧纸面拖动鼠标、手指或手写笔。这里没有标准答案，只有你的讲解方式。</p>
+          <div class="demo-steps">
+            <div class="demo-step"><b>1</b><span><strong>挑一支笔</strong>墨绿标记重点，朱红写下提示。</span></div>
+            <div class="demo-step"><b>2</b><span><strong>圈出解题线索</strong>支持鼠标、触控与压感笔输入。</span></div>
+            <div class="demo-step"><b>3</b><span><strong>换个思路再来</strong>点击清空，纸面立刻恢复干净。</span></div>
+          </div>
+        </div>
+        <div class="demo-board">
+          <div class="board-toolbar" aria-label="书写工具栏">
+            <span class="tool-label">笔色</span>
+            <button class="color-tool active" type="button" data-color="#c6543f" aria-label="朱红色" aria-pressed="true"></button>
+            <button class="color-tool" type="button" data-color="#0e5b50" aria-label="墨绿色" aria-pressed="false"></button>
+            <button class="color-tool" type="button" data-color="#d49b28" aria-label="金黄色" aria-pressed="false"></button>
+            <button class="color-tool" type="button" data-color="#263c78" aria-label="深蓝色" aria-pressed="false"></button>
+            <span class="tool-label" style="margin-left:8px">粗细</span>
+            <button class="width-tool" type="button" data-width="2" aria-pressed="false">细</button>
+            <button class="width-tool active" type="button" data-width="4" aria-pressed="true">中</button>
+            <button class="width-tool" type="button" data-width="8" aria-pressed="false">粗</button>
+            <button class="clear-tool" id="clearCanvas" type="button">清空笔迹</button>
+          </div>
+          <div class="paper-canvas" id="paperCanvas">
+            <div class="canvas-content">
+              <span class="small-title">YOUR ANNOTATION SPACE</span>
+              <h3>A moment worth marking.</h3>
+              <p>Good teaching is not about giving away every answer. It is about leaving a clear path, so students can discover where their own thinking begins.</p>
+            </div>
+            <div class="canvas-question"><strong>讲评提示</strong><p>试着圈出 “a clear path”，再用箭头写下你的解题提示。</p></div>
+            <div class="canvas-hint"><svg viewBox="0 0 24 24" fill="none"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" stroke="currentColor" stroke-width="1.7"/></svg>在这里拖动，留下你的第一笔</div>
+            <canvas id="inkCanvas" tabindex="0" aria-label="可书写区域，使用鼠标、触控或手写笔拖动书写"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="container closing" id="about">
+      <div class="closing-inner reveal">
+        <span class="closing-kicker">INK MEETS INSIGHT</span>
+        <h2>把下一次讲评，留在墨案里。</h2>
+        <p>一张试卷，一支笔，一场更从容的讲解。<br>墨案 InkCase，为认真讲清每一道题而做。</p>
+        <a class="button" href="#top">回到开头<svg viewBox="0 0 24 24" fill="none"><path d="M12 19V5m-5 5 5-5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <span class="footer-brand">墨案 InkCase</span>
+      <span>英语试卷讲评工作台<span class="footer-dot">·</span>Windows / .NET 10 / WPF</span>
+      <span>以纸为案，以墨为言。</span>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      "use strict";
+
+      // ===== 明暗主题 =====
+      const root = document.documentElement;
+      const themeButton = document.getElementById("themeToggle");
+      const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+      let savedTheme = null;
+      try { savedTheme = localStorage.getItem("inkcase-theme"); } catch (_) {}
+
+      function applyTheme(theme) {
+        root.dataset.theme = theme;
+        themeButton.setAttribute("aria-label", theme === "dark" ? "切换浅色模式" : "切换深色模式");
+        document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#151917" : "#f2efe7";
+      }
+      applyTheme(savedTheme || (systemDark.matches ? "dark" : "light"));
+
+      themeButton.addEventListener("click", () => {
+        const next = root.dataset.theme === "dark" ? "light" : "dark";
+        applyTheme(next);
+        try { localStorage.setItem("inkcase-theme", next); } catch (_) {}
+      });
+      systemDark.addEventListener("change", event => {
+        if (!savedTheme) applyTheme(event.matches ? "dark" : "light");
+      });
+
+      // ===== 导航与进入动画 =====
+      const nav = document.getElementById("nav");
+      const updateNav = () => nav.classList.toggle("scrolled", window.scrollY > 12);
+      updateNav();
+      window.addEventListener("scroll", updateNav, { passive: true });
+
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const revealItems = document.querySelectorAll(".reveal");
+      if (reducedMotion || !("IntersectionObserver" in window)) {
+        revealItems.forEach(item => item.classList.add("visible"));
+      } else {
+        const observer = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.12 });
+        revealItems.forEach(item => observer.observe(item));
+      }
+
+      // ===== 互动书写纸面 =====
+      const canvas = document.getElementById("inkCanvas");
+      const paper = document.getElementById("paperCanvas");
+      const context = canvas.getContext("2d");
+      const strokes = [];
+      let activeStroke = null;
+      let penColor = "#c6543f";
+      let penWidth = 4;
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.max(1, Math.round(rect.width * ratio));
+        canvas.height = Math.max(1, Math.round(rect.height * ratio));
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        redraw();
+      }
+
+      function drawStroke(stroke) {
+        if (stroke.points.length === 0) return;
+        context.strokeStyle = stroke.color;
+        context.fillStyle = stroke.color;
+        context.lineWidth = stroke.width;
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        if (stroke.points.length === 1) {
+          const point = stroke.points[0];
+          context.beginPath();
+          context.arc(point.x, point.y, stroke.width / 2, 0, Math.PI * 2);
+          context.fill();
+          return;
+        }
+        context.beginPath();
+        context.moveTo(stroke.points[0].x, stroke.points[0].y);
+        for (let i = 1; i < stroke.points.length - 1; i++) {
+          const current = stroke.points[i];
+          const next = stroke.points[i + 1];
+          context.quadraticCurveTo(current.x, current.y, (current.x + next.x) / 2, (current.y + next.y) / 2);
+        }
+        const last = stroke.points[stroke.points.length - 1];
+        context.lineTo(last.x, last.y);
+        context.stroke();
+      }
+
+      function redraw() {
+        const rect = canvas.getBoundingClientRect();
+        context.clearRect(0, 0, rect.width, rect.height);
+        strokes.forEach(drawStroke);
+        if (activeStroke) drawStroke(activeStroke);
+      }
+
+      function canvasPoint(event) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      }
+
+      canvas.addEventListener("pointerdown", event => {
+        if (event.button !== 0 && event.pointerType === "mouse") return;
+        event.preventDefault();
+        canvas.setPointerCapture(event.pointerId);
+        activeStroke = { color: penColor, width: penWidth, points: [canvasPoint(event)] };
+        paper.classList.add("has-ink");
+        redraw();
+      });
+      canvas.addEventListener("pointermove", event => {
+        if (!activeStroke || !canvas.hasPointerCapture(event.pointerId)) return;
+        event.preventDefault();
+        const events = typeof event.getCoalescedEvents === "function" ? event.getCoalescedEvents() : [event];
+        events.forEach(item => activeStroke.points.push(canvasPoint(item)));
+        redraw();
+      });
+
+      function finishStroke(event) {
+        if (!activeStroke) return;
+        if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+        strokes.push(activeStroke);
+        activeStroke = null;
+        redraw();
+      }
+      canvas.addEventListener("pointerup", finishStroke);
+      canvas.addEventListener("pointercancel", finishStroke);
+
+      document.querySelectorAll(".color-tool").forEach(button => {
+        button.addEventListener("click", () => {
+          penColor = button.dataset.color;
+          document.querySelectorAll(".color-tool").forEach(item => {
+            const selected = item === button;
+            item.classList.toggle("active", selected);
+            item.setAttribute("aria-pressed", String(selected));
+          });
+        });
+      });
+      document.querySelectorAll(".width-tool").forEach(button => {
+        button.addEventListener("click", () => {
+          penWidth = Number(button.dataset.width);
+          document.querySelectorAll(".width-tool").forEach(item => {
+            const selected = item === button;
+            item.classList.toggle("active", selected);
+            item.setAttribute("aria-pressed", String(selected));
+          });
+        });
+      });
+      document.getElementById("clearCanvas").addEventListener("click", () => {
+        strokes.length = 0;
+        activeStroke = null;
+        paper.classList.remove("has-ink");
+        redraw();
+      });
+
+      if ("ResizeObserver" in window) new ResizeObserver(resizeCanvas).observe(paper);
+      else window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+    })();
+  </script>
+</body>
+</html>
