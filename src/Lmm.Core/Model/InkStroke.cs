@@ -3,9 +3,9 @@ namespace Lmm.Core.Model;
 /// <summary>
 /// One stored handwriting stroke. Deliberately stores the beautyfied centreline
 /// and the per-point width multipliers rather than the outline polygon: the
-/// outline is a derived value, rebuilt by <see cref="Ink.InkRibbon"/> on every
-/// render, so the file never depends on the current renderer's cap count or
-/// flattening. <see cref="Tool"/> names the xnotes pen it was drawn with, which
+/// outline is a derived value cached by the renderer, so the file never depends
+/// on the current renderer's cap count or flattening. <see cref="Tool"/> names
+/// the xnotes pen it was drawn with, which
 /// is what decides alpha, dashes and whether width came from pressure, nib or speed.
 /// </summary>
 public sealed class InkStroke

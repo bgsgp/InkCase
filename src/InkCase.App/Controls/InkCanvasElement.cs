@@ -21,11 +21,14 @@ namespace InkCase.App.Controls;
 public sealed class InkCanvasElement : FrameworkElement
 {
     private readonly List<InkStroke> _strokes = [];
+    private readonly List<CachedStroke?> _strokeCache = [];
     private readonly List<Pt> _livePx = [];
     private readonly List<double> _livePressure = [];
     private readonly List<double> _liveTime = [];
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private List<IReadOnlyList<Pt>> _livePolygons = [];
+    private double _cacheWidth;
+    private double _cacheHeight;
     private bool _inkEnabled = true;
     private InkStyle _style = InkStyle.For(InkTool.Pen);
 
@@ -89,6 +92,7 @@ public sealed class InkCanvasElement : FrameworkElement
     public void ClearInk()
     {
         _strokes.Clear();
+        _strokeCache.Clear();
         ResetLive();
         InvalidateVisual();
     }
@@ -105,8 +109,14 @@ public sealed class InkCanvasElement : FrameworkElement
         // Transparent fill so the element is hit-testable without stealing paint.
         dc.DrawRectangle(Brushes.Transparent, null, new Rect(RenderSize));
 
-        foreach (var stroke in _strokes)
-            DrawStroke(dc, stroke);
+        var width = ActualWidth;
+        var height = ActualHeight;
+        if (width > 1 && height > 1)
+        {
+            UpdateStrokeCache(width, height);
+            foreach (var stroke in _strokeCache)
+                stroke?.Draw(dc);
+        }
 
         if (_livePolygons.Count == 0) return;
 
@@ -118,43 +128,122 @@ public sealed class InkCanvasElement : FrameworkElement
         dc.Pop();
     }
 
-    private void DrawStroke(DrawingContext dc, InkStroke stroke)
+    private void UpdateStrokeCache(double width, double height)
     {
-        var width = ActualWidth;
-        var height = ActualHeight;
-        if (width <= 1 || height <= 1 || stroke.Points.Count == 0) return;
+        bool sizeChanged = width != _cacheWidth || height != _cacheHeight;
+        _cacheWidth = width;
+        _cacheHeight = height;
 
-        var style = InkStyle.For(stroke.Tool, stroke.BaseWidth);
-        var center = new Pt[stroke.Points.Count];
-        var halfWidth = new double[stroke.Points.Count];
-        for (int i = 0; i < center.Length; i++)
+        if (_strokeCache.Count > _strokes.Count)
+            _strokeCache.RemoveRange(_strokes.Count, _strokeCache.Count - _strokes.Count);
+        while (_strokeCache.Count < _strokes.Count)
+            _strokeCache.Add(null);
+
+        for (int i = 0; i < _strokes.Count; i++)
         {
-            center[i] = new Pt(stroke.Points[i].X * width, stroke.Points[i].Y * height);
-            double factor = stroke.WidthFactors is { } factors && i < factors.Count && factors[i] > 0 ? factors[i] : 1.0;
-            halfWidth[i] = Math.Max(0.2, stroke.BaseWidth * 0.5 * factor);
+            var stroke = _strokes[i];
+            if (!sizeChanged && _strokeCache[i]?.Matches(stroke) == true) continue;
+            _strokeCache[i] = CachedStroke.Create(stroke, width, height);
+        }
+    }
+
+    /// <summary>
+    /// Frozen render resources for one finished stroke. The model remains mutable,
+    /// so Matches checks a value snapshot before the cache is reused; live input
+    /// therefore pays only for comparisons, not for rebuilding every ribbon.
+    /// </summary>
+    private sealed class CachedStroke
+    {
+        private readonly InkStroke _source;
+        private readonly string _color;
+        private readonly string _tool;
+        private readonly double _baseWidth;
+        private readonly InkPoint[] _points;
+        private readonly double[]? _widthFactors;
+        private readonly Brush _brush;
+        private readonly double _alpha;
+        private readonly List<StreamGeometry> _geometries;
+
+        private CachedStroke(InkStroke source, Brush brush, double alpha, List<StreamGeometry> geometries)
+        {
+            _source = source;
+            _color = source.Color;
+            _tool = source.Tool;
+            _baseWidth = source.BaseWidth;
+            _points = source.Points.ToArray();
+            _widthFactors = source.WidthFactors?.ToArray();
+            _brush = brush;
+            _alpha = alpha;
+            _geometries = geometries;
         }
 
-        var brush = new SolidColorBrush(ParseColor(stroke.Color));
-        brush.Freeze();
-
-        // xnotes fades the highlighter in its paint pass; with source-over only,
-        // element opacity is the honest equivalent (strokes never overlap themselves).
-        dc.PushOpacity(style.AlphaScale);
-
-        if (style.Tool == InkTool.Dashed)
+        public static CachedStroke? Create(InkStroke stroke, double width, double height)
         {
-            foreach (var polygon in InkRibbon.BuildDashed(center, halfWidth, style.DashLength, style.DashGap))
+            if (stroke.Points.Count == 0) return null;
+
+            var style = InkStyle.For(stroke.Tool, stroke.BaseWidth);
+            var center = new Pt[stroke.Points.Count];
+            var halfWidth = new double[stroke.Points.Count];
+            for (int i = 0; i < center.Length; i++)
+            {
+                center[i] = new Pt(stroke.Points[i].X * width, stroke.Points[i].Y * height);
+                double factor = stroke.WidthFactors is { } factors && i < factors.Count && factors[i] > 0 ? factors[i] : 1.0;
+                halfWidth[i] = Math.Max(0.2, stroke.BaseWidth * 0.5 * factor);
+            }
+
+            var brush = new SolidColorBrush(ParseColor(stroke.Color));
+            brush.Freeze();
+            var geometries = new List<StreamGeometry>();
+
+            if (style.Tool == InkTool.Dashed)
+            {
+                foreach (var polygon in InkRibbon.BuildDashed(center, halfWidth, style.DashLength, style.DashGap))
+                    if (polygon.Count >= 3)
+                        geometries.Add(ToGeometry(polygon));
+            }
+            else
+            {
+                var polygon = InkRibbon.Build(center, halfWidth);
                 if (polygon.Count >= 3)
-                    dc.DrawGeometry(brush, null, ToGeometry(polygon));
-        }
-        else
-        {
-            var polygon = InkRibbon.Build(center, halfWidth);
-            if (polygon.Count >= 3)
-                dc.DrawGeometry(brush, null, ToGeometry(polygon));
+                    geometries.Add(ToGeometry(polygon));
+            }
+
+            return new CachedStroke(stroke, brush, style.AlphaScale, geometries);
         }
 
-        dc.Pop();
+        public bool Matches(InkStroke stroke)
+        {
+            if (!ReferenceEquals(_source, stroke)
+                || !string.Equals(_color, stroke.Color, StringComparison.Ordinal)
+                || !string.Equals(_tool, stroke.Tool, StringComparison.Ordinal)
+                || _baseWidth != stroke.BaseWidth
+                || _points.Length != stroke.Points.Count)
+                return false;
+
+            for (int i = 0; i < _points.Length; i++)
+                if (_points[i] != stroke.Points[i])
+                    return false;
+
+            var factors = stroke.WidthFactors;
+            if (_widthFactors is null || factors is null)
+                return _widthFactors is null && factors is null;
+            if (_widthFactors.Length != factors.Count) return false;
+            for (int i = 0; i < _widthFactors.Length; i++)
+                if (_widthFactors[i] != factors[i])
+                    return false;
+
+            return true;
+        }
+
+        public void Draw(DrawingContext dc)
+        {
+            // xnotes fades the highlighter in its paint pass; with source-over only,
+            // element opacity is the honest equivalent.
+            dc.PushOpacity(_alpha);
+            foreach (var geometry in _geometries)
+                dc.DrawGeometry(_brush, null, geometry);
+            dc.Pop();
+        }
     }
 
     private static StreamGeometry ToGeometry(IReadOnlyList<Pt> polygon)

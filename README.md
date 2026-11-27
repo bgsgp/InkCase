@@ -148,10 +148,11 @@ bug，别改回去。（为它专门加过的"闭合笔迹跳过圆帽"分支也
 ## 性能：WPF 怎么保证不卡
 
 笔迹渲染目前是自定义 `FrameworkElement` + `OnRender`（`Controls/InkCanvasElement.cs`）：
-每笔一次 `InkEngine.Build` + `InkRibbon.Build`，把结果多边形塞进 `StreamGeometry`
-画出来；正在写的那一笔也走同一套 `InkEngine.Build(finished: false)`，所以落笔时看到的粗细
-和松手后一致（旧版这里画的是细线预览，抬笔会"跳"一下）。所有
-`Brush`/`Pen`/`Geometry` `.Freeze()` 复用。长列表（题目侧栏）必须正确启用虚拟化
+已完成笔迹的 `InkRibbon.Build` 结果会转成冻结的 `StreamGeometry` 并缓存，只有笔迹内容、
+列表或画布尺寸变化时才重建，避免实时书写每帧重算全部旧笔迹；正在写的那一笔仍走同一套
+`InkEngine.Build(finished: false)`，所以落笔时看到的粗细和松手后一致（旧版这里画的是细线
+预览，抬笔会"跳"一下）。所有 `Brush`/`Pen`/`Geometry` `.Freeze()` 复用。
+长列表（题目侧栏）必须正确启用虚拟化
 （`VirtualizingPanel.IsVirtualizing` + `VirtualizationMode="Recycling"`，
 避免外层多包一层 `ScrollViewer`、非虚拟化面板模板、`Auto` 尺寸、整体
 `Clear()` 这几个会"悄悄打破虚拟化"的坑）。这部分 UI 还没写，上面是设计
